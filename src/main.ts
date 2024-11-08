@@ -3,6 +3,11 @@ import "./modern-normalize.css";
 import "./style.css";
 import LZString from "lz-string";
 import * as monaco from "monaco-editor";
+import { createClient } from "@liveblocks/client";
+import { LiveblocksYjsProvider } from "@liveblocks/yjs";
+import * as Y from "yjs";
+import { MonacoBinding } from "y-monaco";
+import { Awareness } from "y-protocols/awareness";
 import { configureMermaidLanguage } from "./configMermaidLanguage";
 
 // Call the configuration function before creating the editor
@@ -76,6 +81,7 @@ class MermaidEditor {
   private errorOverlay!: HTMLDivElement;
   private exportButton!: HTMLButtonElement;
   private exportPngButton!: HTMLButtonElement;
+  private roomId?: string;
   constructor() {
     this.initializeDOM();
     this.initializeMermaid();
@@ -84,20 +90,44 @@ class MermaidEditor {
   }
 
   private initializeDOM(): void {
-    // Replace textarea initialization with Monaco
+    // Get room from URL query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Initialize Monaco editor (moved outside the if block)
     const editorElement =
       document.querySelector<HTMLDivElement>("#monaco-editor")!;
     this.editor = monaco.editor.create(editorElement, {
-      value: `graph TD
-    A[Start] --> B[Process]
-    B --> C[End]`,
+      value: ``,
       language: "mermaid",
       theme: "mermaid",
       minimap: { enabled: false },
       scrollBeyondLastLine: false,
-
       automaticLayout: true,
     });
+
+    this.roomId = urlParams.get("room") ?? undefined;
+
+    let monacoBinding: MonacoBinding | undefined;
+
+    // Only set up Liveblocks if room parameter exists
+    if (this.roomId) {
+      const client = createClient({
+        publicApiKey: import.meta.env.VITE_LIVEBLOCKS_PUBLIC_API_KEY,
+      });
+
+      const { room } = client.enterRoom(this.roomId);
+      const yDoc = new Y.Doc();
+      const yText = yDoc.getText("monaco");
+      const yProvider = new LiveblocksYjsProvider(room, yDoc);
+
+      // Create Monaco binding after editor initialization
+      monacoBinding = new MonacoBinding(
+        yText,
+        this.editor.getModel() as monaco.editor.ITextModel,
+        new Set([this.editor]),
+        yProvider.awareness as unknown as Awareness
+      );
+    }
 
     this.previewPane = document.querySelector<HTMLDivElement>("#preview-pane")!;
     this.mermaidPreview =
@@ -273,9 +303,12 @@ class MermaidEditor {
   }
 
   private loadInitialState(): void {
+    const hash = window.location.hash;
+    if (!hash) return;
+
     this.loadSavedEditorWidth();
-    this.loadDiagramFromURL();
-    if (!window.location.hash) {
+    if (!this.roomId) {
+      this.loadDiagramFromURL();
       this.updatePreview();
     }
   }

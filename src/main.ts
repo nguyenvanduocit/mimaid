@@ -11,7 +11,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     B --> C[End]</textarea>
     </div>
     <div class="resize-handle"></div>
-    <div class="preview-pane">
+    <div class="preview-pane" id="preview-pane">
       <div id="mermaid-preview"></div>
     </div>
   </div>
@@ -58,7 +58,7 @@ const state: EditorState = {
 
 class MermaidEditor {
   private editor!: HTMLTextAreaElement;
-  private preview!: HTMLDivElement;
+  private previewPane!: HTMLDivElement;
   private mermaidPreview!: HTMLDivElement;
   private container!: HTMLDivElement;
   private editorPane!: HTMLDivElement;
@@ -75,8 +75,9 @@ class MermaidEditor {
   private initializeDOM(): void {
     this.editor =
       document.querySelector<HTMLTextAreaElement>("#mermaid-editor")!;
-    this.preview = document.querySelector<HTMLDivElement>("#mermaid-preview")!;
-    this.mermaidPreview = this.preview;
+    this.previewPane = document.querySelector<HTMLDivElement>("#preview-pane")!;
+    this.mermaidPreview =
+      document.querySelector<HTMLDivElement>("#mermaid-preview")!;
     this.container = document.querySelector(".container")!;
     this.editorPane = document.querySelector(".editor-pane")!;
     this.handle = document.querySelector(".resize-handle")!;
@@ -85,7 +86,7 @@ class MermaidEditor {
     this.errorOverlay = document.createElement("div");
     this.errorOverlay.className = "error-overlay";
     this.errorOverlay.style.display = "none";
-    this.preview.appendChild(this.errorOverlay);
+    this.previewPane.appendChild(this.errorOverlay);
   }
 
   private initializeMermaid(): void {
@@ -101,12 +102,12 @@ class MermaidEditor {
   private updatePreview = async (): Promise<void> => {
     try {
       const code = this.editor.value;
-      this.preview.innerHTML = "";
+      this.mermaidPreview.innerHTML = "";
 
       // Create and append error overlay again since we cleared the preview
       this.errorOverlay = document.createElement("div");
       this.errorOverlay.className = "error-overlay";
-      this.preview.appendChild(this.errorOverlay);
+      this.previewPane.appendChild(this.errorOverlay);
 
       // Validate syntax first
       if (!(await mermaid.parse(code))) {
@@ -117,8 +118,17 @@ class MermaidEditor {
       window.history.replaceState(null, "", `#${compressedCode}`);
 
       const result = await mermaid.render("mermaid-diagram", code);
-      this.preview.innerHTML = result.svg;
+      this.mermaidPreview.innerHTML = result.svg;
       this.hideError();
+
+      // Auto-fit on first render
+      if (
+        state.scale === 1 &&
+        state.translateX === 0 &&
+        state.translateY === 0
+      ) {
+        this.autoFitPreview();
+      }
     } catch (error) {
       console.error("Failed to update preview:", error);
       this.showError(
@@ -126,6 +136,28 @@ class MermaidEditor {
       );
     }
   };
+
+  private autoFitPreview(): void {
+    // Get the SVG element
+    const svg = this.mermaidPreview.querySelector("svg");
+    if (!svg) return;
+
+    // Get dimensions
+    const svgRect = svg.getBoundingClientRect();
+    const previewPaneRect = this.previewPane.getBoundingClientRect();
+
+    // Calculate scale to fit
+    const scaleX = previewPaneRect.width / svgRect.width;
+    const scaleY = previewPaneRect.height / svgRect.height;
+    const scale = Math.min(scaleX, scaleY, CONFIG.maxScale) * 0.9; // 90% of available space
+
+    // Calculate center position
+    state.scale = scale;
+    state.translateX = (previewPaneRect.width - svgRect.width * scale) / 2;
+    state.translateY = (previewPaneRect.height - svgRect.height * scale) / 2;
+
+    this.updateTransform();
+  }
 
   private loadDiagramFromURL(): void {
     const hash = window.location.hash;
@@ -144,7 +176,7 @@ class MermaidEditor {
   }
 
   private setupResizeListeners(): void {
-    this.handle.addEventListener("mousedown", (e) => {
+    this.handle.addEventListener("mousedown", (_e: MouseEvent) => {
       state.isResizing = true;
       document.addEventListener("mousemove", this.handleMouseMove);
       document.addEventListener("mouseup", () => {
@@ -157,8 +189,8 @@ class MermaidEditor {
   }
 
   private setupPanZoomListeners(): void {
-    this.preview.addEventListener("wheel", this.handleZoom);
-    this.preview.addEventListener("mousedown", this.handleDragStart);
+    this.mermaidPreview.addEventListener("wheel", this.handleZoom);
+    this.mermaidPreview.addEventListener("mousedown", this.handleDragStart);
     document.addEventListener("mousemove", this.handleDragMove);
     document.addEventListener("mouseup", this.handleDragEnd);
   }
@@ -166,7 +198,7 @@ class MermaidEditor {
   private handleZoom = (e: WheelEvent): void => {
     e.preventDefault();
     // Get mouse position relative to the preview
-    const rect = this.preview.getBoundingClientRect();
+    const rect = this.previewPane.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 

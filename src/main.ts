@@ -117,12 +117,22 @@ class MermaidEditor {
       const yDoc = new Y.Doc();
       const yText = yDoc.getText("monaco");
       const yProvider = new LiveblocksYjsProvider(room, yDoc);
+      const awareness = yProvider.awareness as unknown as Awareness;
+      debugger;
+      const userColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+
+      const name =
+        urlParams.get("name") ?? `User ${Math.floor(Math.random() * 1000)}`;
+      awareness.setLocalState({
+        color: userColor,
+        name,
+      });
 
       new MonacoBinding(
         yText,
         this.editor.getModel() as monaco.editor.ITextModel,
         new Set([this.editor]),
-        yProvider.awareness as unknown as Awareness
+        awareness
       );
     }
 

@@ -107,8 +107,6 @@ class MermaidEditor {
 
     this.roomId = urlParams.get("room") ?? undefined;
 
-    let monacoBinding: MonacoBinding | undefined;
-
     // Only set up Liveblocks if room parameter exists
     if (this.roomId) {
       const client = createClient({
@@ -120,8 +118,7 @@ class MermaidEditor {
       const yText = yDoc.getText("monaco");
       const yProvider = new LiveblocksYjsProvider(room, yDoc);
 
-      // Create Monaco binding after editor initialization
-      monacoBinding = new MonacoBinding(
+      new MonacoBinding(
         yText,
         this.editor.getModel() as monaco.editor.ITextModel,
         new Set([this.editor]),
@@ -148,7 +145,7 @@ class MermaidEditor {
 
   private setupEventListeners(): void {
     // Replace textarea input listener with Monaco change listener
-    const debouncedUpdatePreview = this.debounce(this.updatePreview, 300);
+    const debouncedUpdatePreview = this.debounce(this.updatePreview, 500);
     this.editor.onDidChangeModelContent(() => {
       debouncedUpdatePreview();
     });

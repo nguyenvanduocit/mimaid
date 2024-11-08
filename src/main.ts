@@ -222,7 +222,6 @@ class MermaidEditor {
       const compressedCode = hash.slice(1);
       const code = LZString.decompressFromEncodedURIComponent(compressedCode);
       if (code) {
-        // Update Monaco value instead of textarea
         this.editor.setValue(code);
       }
     } catch (error) {
@@ -307,7 +306,6 @@ class MermaidEditor {
     this.loadSavedEditorWidth();
     if (!this.roomId) {
       this.loadDiagramFromURL();
-      this.updatePreview();
     }
   }
 

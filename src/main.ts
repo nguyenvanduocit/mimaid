@@ -2,13 +2,16 @@ import mermaid from "mermaid";
 import "./modern-normalize.css";
 import "./style.css";
 import LZString from "lz-string";
+import * as monaco from "monaco-editor";
+import { configureMermaidLanguage } from "./configMermaidLanguage";
+
+// Call the configuration function before creating the editor
+configureMermaidLanguage();
 
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div class="container">
     <div class="editor-pane">
-      <textarea id="mermaid-editor" class="editor">graph TD
-    A[Start] --> B[Process]
-    B --> C[End]</textarea>
+      <div id="monaco-editor" class="editor"></div>
     </div>
     <div class="resize-handle"></div>
     <div class="preview-pane" id="preview-pane">
@@ -64,7 +67,7 @@ const state: EditorState = {
 };
 
 class MermaidEditor {
-  private editor!: HTMLTextAreaElement;
+  private editor!: monaco.editor.IStandaloneCodeEditor;
   private previewPane!: HTMLDivElement;
   private mermaidPreview!: HTMLDivElement;
   private container!: HTMLDivElement;
@@ -81,8 +84,21 @@ class MermaidEditor {
   }
 
   private initializeDOM(): void {
-    this.editor =
-      document.querySelector<HTMLTextAreaElement>("#mermaid-editor")!;
+    // Replace textarea initialization with Monaco
+    const editorElement =
+      document.querySelector<HTMLDivElement>("#monaco-editor")!;
+    this.editor = monaco.editor.create(editorElement, {
+      value: `graph TD
+    A[Start] --> B[Process]
+    B --> C[End]`,
+      language: "mermaid",
+      theme: "mermaid",
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+
+      automaticLayout: true,
+    });
+
     this.previewPane = document.querySelector<HTMLDivElement>("#preview-pane")!;
     this.mermaidPreview =
       document.querySelector<HTMLDivElement>("#mermaid-preview")!;
@@ -101,9 +117,11 @@ class MermaidEditor {
   }
 
   private setupEventListeners(): void {
-    // Debounce the updatePreview function
+    // Replace textarea input listener with Monaco change listener
     const debouncedUpdatePreview = this.debounce(this.updatePreview, 300);
-    this.editor.addEventListener("input", debouncedUpdatePreview);
+    this.editor.onDidChangeModelContent(() => {
+      debouncedUpdatePreview();
+    });
     this.setupResizeListeners();
     this.setupPanZoomListeners();
     this.exportButton.addEventListener("click", () => this.exportToSvg());
@@ -112,7 +130,8 @@ class MermaidEditor {
 
   private updatePreview = async (): Promise<void> => {
     try {
-      const code = this.editor.value;
+      // Get value from Monaco instead of textarea
+      const code = this.editor.getValue();
       this.mermaidPreview.innerHTML = "";
       // Validate syntax first
       if (!(await mermaid.parse(code))) {
@@ -170,10 +189,11 @@ class MermaidEditor {
     const hash = window.location.hash;
     if (hash) {
       try {
-        const compressedCode = hash.slice(1); // Remove the # symbol
+        const compressedCode = hash.slice(1);
         const code = LZString.decompressFromEncodedURIComponent(compressedCode);
         if (code) {
-          this.editor.value = code;
+          // Update Monaco value instead of textarea
+          this.editor.setValue(code);
           this.updatePreview();
         }
       } catch (error) {

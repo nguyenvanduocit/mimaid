@@ -214,18 +214,19 @@ class MermaidEditor {
 
   private loadDiagramFromURL(): void {
     const hash = window.location.hash;
-    if (hash) {
-      try {
-        const compressedCode = hash.slice(1);
-        const code = LZString.decompressFromEncodedURIComponent(compressedCode);
-        if (code) {
-          // Update Monaco value instead of textarea
-          this.editor.setValue(code);
-          this.updatePreview();
-        }
-      } catch (error) {
-        console.error("Failed to decompress diagram from URL:", error);
+    if (!hash) {
+      return;
+    }
+
+    try {
+      const compressedCode = hash.slice(1);
+      const code = LZString.decompressFromEncodedURIComponent(compressedCode);
+      if (code) {
+        // Update Monaco value instead of textarea
+        this.editor.setValue(code);
       }
+    } catch (error) {
+      console.error("Failed to decompress diagram from URL:", error);
     }
   }
 

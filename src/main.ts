@@ -13,6 +13,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <div class="resize-handle"></div>
     <div class="preview-pane" id="preview-pane">
       <div id="mermaid-preview"></div>
+      <div class="error-overlay"></div>
     </div>
   </div>
 `;
@@ -26,6 +27,8 @@ interface EditorState {
   isResizing: boolean;
   startX: number;
   startY: number;
+  zoomTranslateX: number;
+  zoomTranslateY: number;
 }
 
 interface EditorConfig {
@@ -54,6 +57,8 @@ const state: EditorState = {
   isResizing: false,
   startX: 0,
   startY: 0,
+  zoomTranslateX: 0,
+  zoomTranslateY: 0,
 };
 
 class MermaidEditor {
@@ -81,12 +86,7 @@ class MermaidEditor {
     this.container = document.querySelector(".container")!;
     this.editorPane = document.querySelector(".editor-pane")!;
     this.handle = document.querySelector(".resize-handle")!;
-
-    // Create and append error overlay
-    this.errorOverlay = document.createElement("div");
-    this.errorOverlay.className = "error-overlay";
-    this.errorOverlay.style.display = "none";
-    this.previewPane.appendChild(this.errorOverlay);
+    this.errorOverlay = document.querySelector(".error-overlay")!;
   }
 
   private initializeMermaid(): void {
@@ -94,7 +94,9 @@ class MermaidEditor {
   }
 
   private setupEventListeners(): void {
-    this.editor.addEventListener("input", () => this.updatePreview());
+    // Debounce the updatePreview function
+    const debouncedUpdatePreview = this.debounce(this.updatePreview, 300);
+    this.editor.addEventListener("input", debouncedUpdatePreview);
     this.setupResizeListeners();
     this.setupPanZoomListeners();
   }
@@ -103,12 +105,6 @@ class MermaidEditor {
     try {
       const code = this.editor.value;
       this.mermaidPreview.innerHTML = "";
-
-      // Create and append error overlay again since we cleared the preview
-      this.errorOverlay = document.createElement("div");
-      this.errorOverlay.className = "error-overlay";
-      this.previewPane.appendChild(this.errorOverlay);
-
       // Validate syntax first
       if (!(await mermaid.parse(code))) {
         throw new Error("Invalid diagram syntax");
@@ -155,6 +151,8 @@ class MermaidEditor {
     state.scale = scale;
     state.translateX = (previewPaneRect.width - svgRect.width * scale) / 2;
     state.translateY = (previewPaneRect.height - svgRect.height * scale) / 2;
+    state.zoomTranslateX = 0;
+    state.zoomTranslateY = 0;
 
     this.updateTransform();
   }
@@ -197,23 +195,25 @@ class MermaidEditor {
 
   private handleZoom = (e: WheelEvent): void => {
     e.preventDefault();
-    // Get mouse position relative to the preview
-    const rect = this.previewPane.getBoundingClientRect();
+    const rect = this.mermaidPreview.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Calculate new scale
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const delta = e.deltaY > 0 ? -CONFIG.zoomFactor : CONFIG.zoomFactor;
     const newScale = Math.min(
-      Math.max(state.scale * delta, CONFIG.minScale),
+      Math.max(state.scale * (1 + delta), CONFIG.minScale),
       CONFIG.maxScale
     );
 
-    // Adjust translation to zoom towards mouse position
-    state.translateX += mouseX * (1 - delta);
-    state.translateY += mouseY * (1 - delta);
+    // Calculate the position difference caused by scaling
+    const dx = mouseX - mouseX * (newScale / state.scale);
+    const dy = mouseY - mouseY * (newScale / state.scale);
 
+    // Update the translation to keep the point under the mouse fixed
+    state.translateX += dx;
+    state.translateY += dy;
     state.scale = newScale;
+
     this.updateTransform();
   };
 
@@ -235,8 +235,12 @@ class MermaidEditor {
   };
 
   private updateTransform(): void {
+    // Combine both transforms
+    const totalTranslateX = state.translateX + state.zoomTranslateX;
+    const totalTranslateY = state.translateY + state.zoomTranslateY;
+
     this.mermaidPreview.style.transformOrigin = "0 0";
-    this.mermaidPreview.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
+    this.mermaidPreview.style.transform = `translate(${totalTranslateX}px, ${totalTranslateY}px) scale(${state.scale})`;
   }
 
   private loadInitialState(): void {
@@ -272,6 +276,18 @@ class MermaidEditor {
 
   private hideError(): void {
     this.errorOverlay.style.display = "none";
+  }
+
+  // Add debounce utility method
+  private debounce<T extends (...args: any[]) => any>(
+    func: T,
+    wait: number
+  ): (...args: Parameters<T>) => void {
+    let timeout: number | undefined;
+    return (...args: Parameters<T>) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func.apply(this, args), wait);
+    };
   }
 }
 

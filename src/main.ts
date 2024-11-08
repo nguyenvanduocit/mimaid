@@ -13,7 +13,11 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
     <div class="resize-handle"></div>
     <div class="preview-pane" id="preview-pane">
       <div id="mermaid-preview"></div>
-      <div class="error-overlay"></div>
+      <pre class="error-overlay"></pre>
+      <div class="floating-controls">
+        <button id="export-btn" title="Export as SVG">SVG</button>
+        <button id="export-png-btn" title="Export as PNG">PNG</button>
+      </div>
     </div>
   </div>
 `;
@@ -35,16 +39,14 @@ interface EditorConfig {
   minScale: number;
   maxScale: number;
   minWidth: number;
-  maxWidth: number;
   zoomFactor: number;
 }
 
 // Configuration object
 const CONFIG: EditorConfig = {
   minScale: 0.5,
-  maxScale: 3,
-  minWidth: 20, // percentage
-  maxWidth: 80, // percentage
+  maxScale: 5,
+  minWidth: 20,
   zoomFactor: 0.1,
 };
 
@@ -69,7 +71,8 @@ class MermaidEditor {
   private editorPane!: HTMLDivElement;
   private handle!: HTMLDivElement;
   private errorOverlay!: HTMLDivElement;
-
+  private exportButton!: HTMLButtonElement;
+  private exportPngButton!: HTMLButtonElement;
   constructor() {
     this.initializeDOM();
     this.initializeMermaid();
@@ -87,6 +90,10 @@ class MermaidEditor {
     this.editorPane = document.querySelector(".editor-pane")!;
     this.handle = document.querySelector(".resize-handle")!;
     this.errorOverlay = document.querySelector(".error-overlay")!;
+    this.exportButton =
+      document.querySelector<HTMLButtonElement>("#export-btn")!;
+    this.exportPngButton =
+      document.querySelector<HTMLButtonElement>("#export-png-btn")!;
   }
 
   private initializeMermaid(): void {
@@ -99,6 +106,8 @@ class MermaidEditor {
     this.editor.addEventListener("input", debouncedUpdatePreview);
     this.setupResizeListeners();
     this.setupPanZoomListeners();
+    this.exportButton.addEventListener("click", () => this.exportToSvg());
+    this.exportPngButton.addEventListener("click", () => this.exportToPng());
   }
 
   private updatePreview = async (): Promise<void> => {
@@ -262,10 +271,7 @@ class MermaidEditor {
     if (!state.isResizing) return;
     const containerWidth = this.container.clientWidth;
     const newWidth = (e.clientX / containerWidth) * 100;
-    const clampedWidth = Math.min(
-      Math.max(newWidth, CONFIG.minWidth),
-      CONFIG.maxWidth
-    );
+    const clampedWidth = Math.max(newWidth, CONFIG.minWidth);
     this.editorPane.style.flexBasis = `${clampedWidth}%`;
   };
 
@@ -288,6 +294,81 @@ class MermaidEditor {
       clearTimeout(timeout);
       timeout = setTimeout(() => func.apply(this, args), wait);
     };
+  }
+
+  private exportToSvg(): void {
+    // Get the SVG element
+    const svg = this.mermaidPreview.querySelector("svg");
+    if (!svg) return;
+
+    // Get SVG content
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    // Create download link
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "mermaid-diagram.svg";
+    a.click();
+
+    // Cleanup
+    URL.revokeObjectURL(url);
+  }
+
+  private exportToPng(): void {
+    const svg = this.mermaidPreview.querySelector("svg");
+    if (!svg) return;
+
+    // Get the actual SVG dimensions from viewBox or width/height attributes
+    const viewBox = svg.getAttribute("viewBox")?.split(" ").map(Number);
+    const svgWidth = viewBox
+      ? viewBox[2]
+      : parseFloat(svg.getAttribute("width") || "0");
+    const svgHeight = viewBox
+      ? viewBox[3]
+      : parseFloat(svg.getAttribute("height") || "0");
+
+    // Calculate scale to ensure minimum dimension of 1000px
+    const minDimension = 1000;
+    const scaleX = minDimension / svgWidth;
+    const scaleY = minDimension / svgHeight;
+    const scale = Math.max(scaleX, scaleY);
+
+    // Set canvas dimensions
+    const canvas = document.createElement("canvas");
+    canvas.width = svgWidth * scale;
+    canvas.height = svgHeight * scale;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Scale the context
+    ctx.scale(scale, scale);
+
+    // Get SVG data and encode it
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const svgBase64 = btoa(unescape(encodeURIComponent(svgData)));
+    const dataUrl = `data:image/svg+xml;base64,${svgBase64}`;
+
+    // Create image and draw to canvas
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0);
+
+      // Convert to PNG and download
+      try {
+        const pngUrl = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = pngUrl;
+        a.download = "mermaid-diagram.png";
+        a.click();
+      } catch (error) {
+        console.error("Error exporting PNG:", error);
+      }
+    };
+    img.src = dataUrl;
   }
 }
 

@@ -50,3 +50,35 @@ body {
 .resize-handle:hover {
     background-color: #999;
 }
+.error-overlay {
+    color: red;
+    font-size: 0.8rem;
+    padding: 1rem;
+    width: 100%;
+    white-space: pre-wrap;
+}
+
+.floating-controls {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    display: flex;
+    gap: 8px;
+    z-index: 100;
+}
+
+.floating-controls button {
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 0.6rem;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.floating-controls button:hover {
+    background: #f0f0f0;
+}

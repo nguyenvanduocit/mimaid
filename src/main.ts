@@ -90,20 +90,32 @@ class MermaidEditor {
   }
 
   private initializeDOM(): void {
-    // Get room from URL query parameters
+    // Get URL parameters
     const urlParams = new URLSearchParams(window.location.search);
+    const hideEditor = urlParams.has("hideEditor");
 
-    // Initialize Monaco editor (moved outside the if block)
+    // Modify editor pane visibility if hideEditor is present
+    if (hideEditor) {
+      const editorPane = document.querySelector<HTMLDivElement>(".editor-pane");
+      const resizeHandle =
+        document.querySelector<HTMLDivElement>(".resize-handle");
+      if (editorPane) editorPane.style.display = "none";
+      if (resizeHandle) resizeHandle.style.display = "none";
+    }
+
+    // Initialize Monaco editor only if not hidden
     const editorElement =
       document.querySelector<HTMLDivElement>("#monaco-editor")!;
-    this.editor = monaco.editor.create(editorElement, {
-      value: ``,
-      language: "mermaid",
-      theme: "mermaid",
-      minimap: { enabled: false },
-      scrollBeyondLastLine: false,
-      automaticLayout: true,
-    });
+    if (!hideEditor) {
+      this.editor = monaco.editor.create(editorElement, {
+        value: ``,
+        language: "mermaid",
+        theme: "mermaid",
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        automaticLayout: true,
+      });
+    }
 
     this.roomId = urlParams.get("room") ?? undefined;
 
@@ -154,49 +166,65 @@ class MermaidEditor {
   }
 
   private setupEventListeners(): void {
-    // Replace textarea input listener with Monaco change listener
-    const debouncedUpdatePreview = this.debounce(this.updatePreview, 500);
-    this.editor.onDidChangeModelContent(() => {
-      debouncedUpdatePreview();
-    });
-    this.setupResizeListeners();
+    // Only set up editor-related listeners if editor exists
+    if (this.editor) {
+      const debouncedUpdatePreview = this.debounce(this.updatePreview, 500);
+      this.editor.onDidChangeModelContent(() => {
+        debouncedUpdatePreview();
+      });
+      this.setupResizeListeners();
+    }
+
     this.setupPanZoomListeners();
     this.exportButton.addEventListener("click", () => this.exportToSvg());
     this.exportPngButton.addEventListener("click", () => this.exportToPng());
   }
 
-  private updatePreview = async (): Promise<void> => {
+  private async renderMermaidDiagram(
+    code: string,
+    updateHash = false
+  ): Promise<void> {
     try {
-      // Get value from Monaco instead of textarea
-      const code = this.editor.getValue();
       this.mermaidPreview.innerHTML = "";
-      // Validate syntax first
+
+      // Validate syntax
       if (!(await mermaid.parse(code))) {
         throw new Error("Invalid diagram syntax");
       }
 
-      const compressedCode = LZString.compressToEncodedURIComponent(code);
-      window.history.replaceState(null, "", `#${compressedCode}`);
+      // Update URL hash if needed
+      if (updateHash) {
+        const compressedCode = LZString.compressToEncodedURIComponent(code);
+        window.history.replaceState(null, "", `#${compressedCode}`);
+      }
 
+      // Render diagram
       const result = await mermaid.render("mermaid-diagram", code);
       this.mermaidPreview.innerHTML = result.svg;
       this.hideError();
 
-      // Auto-fit on first render
-      if (
-        state.scale === 1 &&
-        state.translateX === 0 &&
-        state.translateY === 0
-      ) {
+      // Auto-fit if diagram is in initial position
+      const isInitialPosition =
+        state.scale === 1 && state.translateX === 0 && state.translateY === 0;
+      if (isInitialPosition || !updateHash) {
         this.autoFitPreview();
       }
     } catch (error) {
-      console.error("Failed to update preview:", error);
+      console.error("Failed to render diagram:", error);
       this.showError(
         error instanceof Error ? error.message : "Failed to render diagram"
       );
     }
+  }
+
+  private updatePreview = async (): Promise<void> => {
+    const code = this.editor.getValue();
+    await this.renderMermaidDiagram(code, true);
   };
+
+  private async renderDiagram(code: string): Promise<void> {
+    await this.renderMermaidDiagram(code, false);
+  }
 
   private autoFitPreview(): void {
     // Get the SVG element
@@ -232,7 +260,11 @@ class MermaidEditor {
       const compressedCode = hash.slice(1);
       const code = LZString.decompressFromEncodedURIComponent(compressedCode);
       if (code) {
-        this.editor.setValue(code);
+        if (this.editor) {
+          this.editor.setValue(code);
+        } else {
+          this.renderDiagram(code);
+        }
       }
     } catch (error) {
       console.error("Failed to decompress diagram from URL:", error);

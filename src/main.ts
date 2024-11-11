@@ -101,12 +101,9 @@ class MermaidEditor {
         document.querySelector<HTMLDivElement>(".resize-handle");
       if (editorPane) editorPane.style.display = "none";
       if (resizeHandle) resizeHandle.style.display = "none";
-    }
-
-    // Initialize Monaco editor only if not hidden
-    const editorElement =
-      document.querySelector<HTMLDivElement>("#monaco-editor")!;
-    if (!hideEditor) {
+    } else {
+      const editorElement =
+        document.querySelector<HTMLDivElement>("#monaco-editor")!;
       this.editor = monaco.editor.create(editorElement, {
         value: ``,
         language: "mermaid",

@@ -11,6 +11,25 @@ export const configureMermaidLanguage = () => {
   ];
 
   const keywords = {
+    timeline: {
+      typeKeywords: ["timeline"],
+      blockKeywords: ["section"],
+      keywords: ["title"],
+    },
+    mindmap: {
+      typeKeywords: ["mindmap"],
+      blockKeywords: [],
+      keywords: [
+        "square",
+        "square_box",
+        "round",
+        "circle",
+        "cloud",
+        "bang",
+        "hexagon",
+        "default",
+      ],
+    },
     flowchart: {
       typeKeywords: ["flowchart", "flowchart-v2", "graph"],
       blockKeywords: ["subgraph", "end"],
@@ -256,6 +275,8 @@ export const configureMermaidLanguage = () => {
       ),
     tokenizer: {
       root: [
+        [/^\s*timeline/, "typeKeyword", "timeline"],
+        [/^\s*mindmap/, "typeKeyword", "mindmap"],
         [/^\s*gitGraph/m, "typeKeyword", "gitGraph"],
         [/^\s*info/m, "typeKeyword", "info"],
         [/^\s*pie/m, "typeKeyword", "pie"],
@@ -277,6 +298,41 @@ export const configureMermaidLanguage = () => {
       ],
       configDirective: [
         [/%%$/, { token: "string", next: "@pop", nextEmbedded: "@pop" }],
+      ],
+      timeline: [
+        configDirectiveHandler,
+        [/(title)(.*)/, ["keyword", "string"]],
+        [/(section)(.*)/, ["typeKeyword", "string"]],
+        [/^\s*(\d+\s*(?:BC|AD|CE|BCE)?)\s*:/, ["number", "delimiter.bracket"]],
+        [/^\s*:/, "delimiter.bracket"],
+        [
+          /[a-zA-Z][\w$]*/,
+          {
+            cases: {
+              "@timelineBlockKeywords": "typeKeyword",
+              "@timelineKeywords": "keyword",
+              "@default": "variable",
+            },
+          },
+        ],
+        [/%%[^$]([^%]*(?!%%$)%?)*$/, "comment"],
+      ],
+      mindmap: [
+        configDirectiveHandler,
+        [
+          /[a-zA-Z][\w$]*/,
+          {
+            cases: {
+              "@mindmapBlockKeywords": "typeKeyword",
+              "@mindmapKeywords": "keyword",
+              "@default": "variable",
+            },
+          },
+        ],
+        [/::/, "transition"],
+        [/[-+*]/, "delimiter.bracket"],
+        [/".*?"/, "string"],
+        [/%%[^$]([^%]*(?!%%$)%?)*$/, "comment"],
       ],
       gitGraph: [
         configDirectiveHandler,

@@ -9,6 +9,7 @@ import * as Y from "yjs";
 import { MonacoBinding } from "y-monaco";
 import { Awareness } from "y-protocols/awareness";
 import { configureMermaidLanguage } from "./configMermaidLanguage";
+import Anthropic from "@anthropic-ai/sdk";
 
 // Call the configuration function before creating the editor
 configureMermaidLanguage();
@@ -16,7 +17,24 @@ configureMermaidLanguage();
 document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
   <div class="container">
     <div class="editor-pane">
+      <div class="status-bar">
+        <div class="status-bar-left">
+          <button id="settings-btn" class="button" title="Settings">Settings</button>
+          <div id="settings-dialog" class="settings-dialog hidden">
+            <div class="settings-content">
+              <label for="api-token">Anthropic API Token:</label>
+              <input type="password" id="api-token" />
+              <button id="save-settings" class="button">Save</button>
+            </div>
+          </div>
+        </div>
+        <div class="status-bar-right">
+        </div>
+      </div>
       <div id="monaco-editor" class="editor"></div>
+      <div id="input-area" class="input-area">
+        <textarea id="input-field" placeholder="Enter your prompt here..."></textarea>
+      </div>
     </div>
     <div class="resize-handle"></div>
     <div class="preview-pane" id="preview-pane">
@@ -82,14 +100,32 @@ class MermaidEditor {
   private exportButton!: HTMLButtonElement;
   private exportPngButton!: HTMLButtonElement;
   private roomId?: string;
+  private inputArea!: HTMLDivElement;
+  private client: Anthropic;
+
   constructor() {
     this.initializeDOM();
     this.initializeMermaid();
     this.setupEventListeners();
+    this.setupCollaboration();
     this.loadInitialState();
+
+    // Initialize Anthropic client with stored API key
+    const storedApiKey =
+      localStorage.getItem("anthropicApiKey") ||
+      import.meta.env.VITE_ANTHROPIC_API_KEY;
+    this.client = new Anthropic({
+      apiKey: storedApiKey,
+      dangerouslyAllowBrowser: true,
+    });
   }
 
   private initializeDOM(): void {
+    this.initializeElements();
+    this.handleEditorVisibility();
+  }
+
+  private initializeElements(): void {
     this.previewPane = document.querySelector<HTMLDivElement>("#preview-pane")!;
     this.mermaidPreview =
       document.querySelector<HTMLDivElement>("#mermaid-preview")!;
@@ -99,111 +135,211 @@ class MermaidEditor {
     this.errorOverlay = document.querySelector(".error-overlay")!;
     this.exportButton =
       document.querySelector<HTMLButtonElement>("#export-btn")!;
+    this.exportButton.classList.add("button");
+
     this.exportPngButton =
       document.querySelector<HTMLButtonElement>("#export-png-btn")!;
-    // Get URL parameters
+    this.exportPngButton.classList.add("button");
+    this.inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
+
+    // Add settings button initialization
+    const settingsButton =
+      document.querySelector<HTMLButtonElement>("#settings-btn")!;
+    settingsButton.classList.add("button");
+  }
+
+  private handleEditorVisibility(): void {
     const urlParams = new URLSearchParams(window.location.search);
     const hideEditor = urlParams.has("hideEditor");
 
-    // Modify editor pane visibility if hideEditor is present
     if (hideEditor) {
-      const editorPane = document.querySelector<HTMLDivElement>(".editor-pane");
-      const resizeHandle =
-        document.querySelector<HTMLDivElement>(".resize-handle");
-      if (editorPane) editorPane.style.display = "none";
-      if (resizeHandle) resizeHandle.style.display = "none";
+      this.hideEditorPane();
     } else {
-      const code = this.loadDiagramFromURL();
-      this.renderDiagram(code);
-      const editorElement =
-        document.querySelector<HTMLDivElement>("#monaco-editor")!;
-      this.editor = monaco.editor.create(editorElement, {
-        value: code,
-        language: "mermaid",
-        theme: "mermaid",
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        automaticLayout: true,
-      });
-
-      monaco.editor.addEditorAction({
-        id: "monacopilot.triggerCompletion",
-        label: "Complete Code",
-        contextMenuGroupId: "navigation",
-        keybindings: [
-          monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Space,
-        ],
-        run: () => {},
-      });
+      this.setupEditor();
     }
+  }
 
+  private hideEditorPane(): void {
+    const editorPane = document.querySelector<HTMLDivElement>(".editor-pane");
+    const resizeHandle =
+      document.querySelector<HTMLDivElement>(".resize-handle");
+    if (editorPane) editorPane.style.display = "none";
+    if (resizeHandle) resizeHandle.style.display = "none";
+  }
+
+  private setupEditor(): void {
+    const code = this.loadDiagramFromURL();
+    const editorElement =
+      document.querySelector<HTMLDivElement>("#monaco-editor")!;
+    this.editor = monaco.editor.create(editorElement, {
+      value: code ?? "",
+      language: "mermaid",
+      theme: "mermaid",
+      minimap: { enabled: false },
+      scrollBeyondLastLine: false,
+      automaticLayout: true,
+    });
+
+    this.setupEditorCompletion();
+  }
+
+  private setupEditorCompletion(): void {
+    monaco.editor.addEditorAction({
+      id: "monacopilot.triggerCompletion",
+      label: "Optimize Diagram",
+      contextMenuGroupId: "navigation",
+      keybindings: [
+        monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Space,
+      ],
+      run: () => {},
+    });
+  }
+
+  private setupCollaboration(): void {
+    const urlParams = new URLSearchParams(window.location.search);
     this.roomId = urlParams.get("room") ?? undefined;
 
-    // Only set up Liveblocks if room parameter exists
-    if (this.roomId) {
-      const client = createClient({
-        publicApiKey: import.meta.env.VITE_LIVEBLOCKS_PUBLIC_API_KEY,
-      });
+    if (!this.roomId) return;
 
-      const { room } = client.enterRoom(this.roomId);
-      const yDoc = new Y.Doc();
-      const yText = yDoc.getText("monaco");
-      const yProvider = new LiveblocksYjsProvider(room, yDoc);
-      const awareness = yProvider.awareness as unknown as Awareness;
-      debugger;
-      const userColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+    const client = createClient({
+      publicApiKey: import.meta.env.VITE_LIVEBLOCKS_PUBLIC_API_KEY,
+    });
 
-      const name =
-        urlParams.get("name") ?? `User ${Math.floor(Math.random() * 1000)}`;
-      awareness.setLocalState({
-        color: userColor,
-        name,
-      });
+    const { room } = client.enterRoom(this.roomId);
+    const yDoc = new Y.Doc();
+    const yText = yDoc.getText("monaco");
+    const yProvider = new LiveblocksYjsProvider(room, yDoc);
+    const awareness = yProvider.awareness as unknown as Awareness;
 
-      new MonacoBinding(
-        yText,
-        this.editor.getModel() as monaco.editor.ITextModel,
-        new Set([this.editor]),
-        awareness
-      );
-    }
+    const userColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+    const name =
+      urlParams.get("name") ?? `User ${Math.floor(Math.random() * 1000)}`;
+
+    awareness.setLocalState({ color: userColor, name });
+
+    new MonacoBinding(
+      yText,
+      this.editor.getModel() as monaco.editor.ITextModel,
+      new Set([this.editor]),
+      awareness
+    );
   }
 
   private initializeMermaid(): void {
     mermaid.initialize({ startOnLoad: false });
+
+    const code = this.loadDiagramFromURL();
+    if (code && code.trim().length > 0) {
+      this.renderDiagram(code);
+    }
   }
 
   private setupEventListeners(): void {
     // Only set up editor-related listeners if editor exists
     if (this.editor) {
       const debouncedUpdatePreview = this.debounce(this.updatePreview, 500);
+      const debouncedGenerateDiagramHash = this.debounce(
+        this.generateDiagramHash,
+        500
+      );
       this.editor.onDidChangeModelContent(() => {
         debouncedUpdatePreview();
+        debouncedGenerateDiagramHash();
       });
       this.setupResizeListeners();
+
+      const inputField =
+        document.querySelector<HTMLTextAreaElement>("#input-field");
+      if (inputField) {
+        // Check if API token exists
+        const apiToken =
+          localStorage.getItem("anthropicApiKey") ||
+          import.meta.env.VITE_ANTHROPIC_API_KEY;
+        if (!apiToken) {
+          inputField.value =
+            "Please set your Anthropic API key in the settings (click the Settings button) to use AI features.";
+          inputField.disabled = true;
+        }
+
+        inputField.addEventListener("keydown", async (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            await this.handleSubmit();
+          }
+        });
+      }
     }
 
     this.setupPanZoomListeners();
     this.exportButton.addEventListener("click", () => this.exportToSvg());
     this.exportPngButton.addEventListener("click", () => this.exportToPng());
+
+    // Add settings dialog listeners
+    const settingsBtn =
+      document.querySelector<HTMLButtonElement>("#settings-btn")!;
+    const settingsDialog =
+      document.querySelector<HTMLDivElement>("#settings-dialog")!;
+    const saveSettingsBtn =
+      document.querySelector<HTMLButtonElement>("#save-settings")!;
+    const apiTokenInput =
+      document.querySelector<HTMLInputElement>("#api-token")!;
+
+    // Load saved API token
+    apiTokenInput.value = localStorage.getItem("anthropicApiKey") || "";
+
+    settingsBtn.addEventListener("click", () => {
+      settingsDialog.classList.toggle("hidden");
+    });
+
+    saveSettingsBtn.addEventListener("click", () => {
+      const apiToken = apiTokenInput.value.trim();
+      const inputField =
+        document.querySelector<HTMLTextAreaElement>("#input-field");
+
+      if (apiToken) {
+        localStorage.setItem("anthropicApiKey", apiToken);
+        this.client = new Anthropic({
+          apiKey: apiToken,
+          dangerouslyAllowBrowser: true,
+        });
+        // Enable and clear the input field when API key is set
+        if (inputField) {
+          inputField.disabled = false;
+          inputField.value = "";
+        }
+      }
+      settingsDialog.classList.add("hidden");
+    });
+
+    // Close dialog when clicking outside
+    document.addEventListener("click", (e) => {
+      if (
+        !settingsDialog.contains(e.target as Node) &&
+        !settingsBtn.contains(e.target as Node) &&
+        !settingsDialog.classList.contains("hidden")
+      ) {
+        settingsDialog.classList.add("hidden");
+      }
+    });
   }
 
-  private async renderMermaidDiagram(
-    code: string,
-    updateHash = false
-  ): Promise<void> {
+  private generateDiagramHash(): void {
+    const code = this.editor.getValue();
+    if (code.trim().length > 0) {
+      const compressedCode = LZString.compressToEncodedURIComponent(code);
+      window.history.replaceState(null, "", `#${compressedCode}`);
+    } else {
+      window.history.replaceState(null, "", "");
+    }
+  }
+
+  private async renderMermaidDiagram(code: string): Promise<void> {
     try {
       this.mermaidPreview.innerHTML = "";
 
       // Validate syntax
       if (!(await mermaid.parse(code))) {
         throw new Error("Invalid diagram syntax");
-      }
-
-      // Update URL hash if needed
-      if (updateHash) {
-        const compressedCode = LZString.compressToEncodedURIComponent(code);
-        window.history.replaceState(null, "", `#${compressedCode}`);
       }
 
       // Render diagram
@@ -214,7 +350,7 @@ class MermaidEditor {
       // Auto-fit if diagram is in initial position
       const isInitialPosition =
         state.scale === 1 && state.translateX === 0 && state.translateY === 0;
-      if (isInitialPosition || !updateHash) {
+      if (isInitialPosition) {
         this.autoFitPreview();
       }
     } catch (error) {
@@ -227,11 +363,15 @@ class MermaidEditor {
 
   private updatePreview = async (): Promise<void> => {
     const code = this.editor.getValue();
-    await this.renderMermaidDiagram(code, true);
+    if (code.trim().length > 0) {
+      await this.renderMermaidDiagram(code);
+    } else {
+      this.mermaidPreview.innerHTML = "";
+    }
   };
 
   private async renderDiagram(code: string): Promise<void> {
-    await this.renderMermaidDiagram(code, false);
+    await this.renderMermaidDiagram(code);
   }
 
   private autoFitPreview(): void {
@@ -258,10 +398,10 @@ class MermaidEditor {
     this.updateTransform();
   }
 
-  private loadDiagramFromURL(): string {
+  private loadDiagramFromURL(): string | null {
     const hash = window.location.hash;
     if (!hash) {
-      return "";
+      return null;
     }
 
     const compressedCode = hash.slice(1);
@@ -457,6 +597,81 @@ class MermaidEditor {
       }
     };
     img.src = dataUrl;
+  }
+
+  private async handleSubmit(): Promise<void> {
+    const inputField =
+      document.querySelector<HTMLTextAreaElement>("#input-field");
+    if (!inputField) return;
+
+    let prompt = inputField.value.trim();
+    if (!prompt) return;
+
+    try {
+      this.editor.updateOptions({ readOnly: true });
+      inputField.disabled = true;
+
+      const currentCode = this.editor.getValue();
+
+      if (currentCode) {
+        prompt = `Given this Mermaid diagram:\n\n${currentCode}\n\n${prompt}`;
+      }
+
+      const stream = await this.client.messages.create({
+        max_tokens: 8192,
+        system:
+          "You are a helpful assistant that can help me go create or edit the Mermaid diagram code. wrap the code in ```mermaid tags. Think step by step before responding.",
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        model: "claude-3-5-haiku-20241022",
+        stream: true,
+      });
+
+      let isInsideCodeBlock = false;
+      let accumulatedCode = "";
+      let tempResponse = "";
+
+      for await (const messageStreamEvent of stream) {
+        if (messageStreamEvent.type === "content_block_delta") {
+          const chunk = messageStreamEvent.delta.text;
+          tempResponse += chunk;
+          // start of code block
+          const mermaidMatch = tempResponse.match(/```mermaid\n([\s\S]*?)```/);
+          if (mermaidMatch) {
+            isInsideCodeBlock = true;
+            accumulatedCode = mermaidMatch[1].trim();
+            this.editor.setValue(accumulatedCode);
+            continue;
+          }
+
+          // end of code block
+          if (tempResponse.includes("```") && isInsideCodeBlock) {
+            isInsideCodeBlock = false;
+            accumulatedCode += tempResponse.replace("```", "");
+            this.editor.setValue(accumulatedCode);
+            break;
+          }
+
+          // inside code block
+          if (isInsideCodeBlock) {
+            accumulatedCode += chunk;
+            this.editor.setValue(accumulatedCode);
+          }
+        }
+      }
+
+      inputField.value = "";
+    } catch (error) {
+      console.error("Error processing prompt:", error);
+      this.showError("Failed to process prompt with AI");
+    } finally {
+      inputField.disabled = false;
+      this.editor.updateOptions({ readOnly: false });
+    }
   }
 }
 

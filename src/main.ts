@@ -27,6 +27,7 @@ document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
               <button id="save-settings" class="button">Save</button>
             </div>
           </div>
+          <span id="generation-status" class="status-text"></span>
         </div>
         <div class="status-bar-right">
         </div>
@@ -99,6 +100,7 @@ class MermaidEditor {
   private errorOverlay!: HTMLDivElement;
   private exportButton!: HTMLButtonElement;
   private exportPngButton!: HTMLButtonElement;
+  private generationStatus!: HTMLSpanElement;
   private roomId?: string;
   private client: Anthropic;
 
@@ -144,6 +146,9 @@ class MermaidEditor {
     const settingsButton =
       document.querySelector<HTMLButtonElement>("#settings-btn")!;
     settingsButton.classList.add("button");
+
+    this.generationStatus =
+      document.querySelector<HTMLSpanElement>("#generation-status")!;
   }
 
   private handleEditorVisibility(): void {
@@ -248,17 +253,22 @@ class MermaidEditor {
 
       const inputField =
         document.querySelector<HTMLTextAreaElement>("#input-field");
-      if (inputField) {
-        // Check if API token exists
-        const apiToken =
-          localStorage.getItem("anthropicApiKey") ||
-          import.meta.env.VITE_ANTHROPIC_API_KEY;
-        if (!apiToken) {
-          inputField.value =
-            "Please set your Anthropic API key in the settings (click the Settings button) to use AI features.";
-          inputField.disabled = true;
-        }
+      const inputArea = document.querySelector<HTMLDivElement>("#input-area");
 
+      // Check if API token exists
+      const apiToken =
+        localStorage.getItem("anthropicApiKey") ||
+        import.meta.env.VITE_ANTHROPIC_API_KEY;
+      if (!apiToken) {
+        this.generationStatus.textContent =
+          "⚠️ Please set your Anthropic API key in settings to use AI features";
+        if (inputArea) inputArea.style.display = "none";
+      } else {
+        this.generationStatus.textContent = "";
+        if (inputArea) inputArea.style.display = "block";
+      }
+
+      if (inputField) {
         inputField.addEventListener("keydown", async (e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -291,6 +301,7 @@ class MermaidEditor {
 
     saveSettingsBtn.addEventListener("click", () => {
       const apiToken = apiTokenInput.value.trim();
+      const inputArea = document.querySelector<HTMLDivElement>("#input-area");
       const inputField =
         document.querySelector<HTMLTextAreaElement>("#input-field");
 
@@ -300,11 +311,20 @@ class MermaidEditor {
           apiKey: apiToken,
           dangerouslyAllowBrowser: true,
         });
-        // Enable and clear the input field when API key is set
-        if (inputField) {
-          inputField.disabled = false;
-          inputField.value = "";
+        // Show input area and clear status when API key is set
+        if (inputArea) {
+          inputArea.style.display = "block";
+          if (inputField) inputField.style.display = "block";
         }
+        this.generationStatus.textContent = "";
+      } else {
+        // Hide input area and show status when no API key
+        if (inputArea) {
+          inputArea.style.display = "none";
+          if (inputField) inputField.style.display = "none";
+        }
+        this.generationStatus.textContent =
+          "⚠️ Please set your Anthropic API key in settings to use AI features";
       }
       settingsDialog.classList.add("hidden");
     });
@@ -608,6 +628,7 @@ class MermaidEditor {
     try {
       this.editor.updateOptions({ readOnly: true });
       inputField.disabled = true;
+      this.generationStatus.textContent = "AI is generating...";
 
       const currentCode = this.editor.getValue();
 
@@ -672,6 +693,7 @@ class MermaidEditor {
     } finally {
       inputField.disabled = false;
       this.editor.updateOptions({ readOnly: false });
+      this.generationStatus.textContent = "";
     }
   }
 }

@@ -185,3 +185,8 @@ body {
 .settings-content button {
     margin-top: 0.5rem;
 }
+.status-text {
+    margin-left: 10px;
+    color: #ffffff;
+    font-size: 14px;
+}

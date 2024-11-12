@@ -100,7 +100,6 @@ class MermaidEditor {
   private exportButton!: HTMLButtonElement;
   private exportPngButton!: HTMLButtonElement;
   private roomId?: string;
-  private inputArea!: HTMLDivElement;
   private client: Anthropic;
 
   constructor() {
@@ -140,7 +139,6 @@ class MermaidEditor {
     this.exportPngButton =
       document.querySelector<HTMLButtonElement>("#export-png-btn")!;
     this.exportPngButton.classList.add("button");
-    this.inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
 
     // Add settings button initialization
     const settingsButton =
@@ -517,7 +515,7 @@ class MermaidEditor {
     func: T,
     wait: number
   ): (...args: Parameters<T>) => void {
-    let timeout: number | undefined;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     return (...args: Parameters<T>) => {
       clearTimeout(timeout);
       timeout = setTimeout(() => func.apply(this, args), wait);
@@ -637,7 +635,10 @@ class MermaidEditor {
 
       for await (const messageStreamEvent of stream) {
         if (messageStreamEvent.type === "content_block_delta") {
-          const chunk = messageStreamEvent.delta.text;
+          const chunk =
+            "text" in messageStreamEvent.delta
+              ? messageStreamEvent.delta.text
+              : "";
           tempResponse += chunk;
           // start of code block
           const mermaidMatch = tempResponse.match(/```mermaid\n([\s\S]*?)```/);

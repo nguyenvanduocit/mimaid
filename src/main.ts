@@ -269,15 +269,18 @@ class MermaidEditor {
   }
 
   private setupResizeListeners(): void {
+    const handleMouseUp = () => {
+      state.isResizing = false;
+      document.removeEventListener("mousemove", this.handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      // Save width to localStorage
+      localStorage.setItem("editorWidth", this.editorPane.style.flexBasis);
+    };
+
     this.handle.addEventListener("mousedown", (_e: MouseEvent) => {
       state.isResizing = true;
       document.addEventListener("mousemove", this.handleMouseMove);
-      document.addEventListener("mouseup", () => {
-        state.isResizing = false;
-        document.removeEventListener("mousemove", this.handleMouseMove);
-        // Save width to localStorage
-        localStorage.setItem("editorWidth", this.editorPane.style.flexBasis);
-      });
+      document.addEventListener("mouseup", handleMouseUp);
     });
   }
 

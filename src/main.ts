@@ -90,6 +90,17 @@ class MermaidEditor {
   }
 
   private initializeDOM(): void {
+    this.previewPane = document.querySelector<HTMLDivElement>("#preview-pane")!;
+    this.mermaidPreview =
+      document.querySelector<HTMLDivElement>("#mermaid-preview")!;
+    this.container = document.querySelector(".container")!;
+    this.editorPane = document.querySelector(".editor-pane")!;
+    this.handle = document.querySelector(".resize-handle")!;
+    this.errorOverlay = document.querySelector(".error-overlay")!;
+    this.exportButton =
+      document.querySelector<HTMLButtonElement>("#export-btn")!;
+    this.exportPngButton =
+      document.querySelector<HTMLButtonElement>("#export-png-btn")!;
     // Get URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const hideEditor = urlParams.has("hideEditor");
@@ -102,15 +113,27 @@ class MermaidEditor {
       if (editorPane) editorPane.style.display = "none";
       if (resizeHandle) resizeHandle.style.display = "none";
     } else {
+      const code = this.loadDiagramFromURL();
+      this.renderDiagram(code);
       const editorElement =
         document.querySelector<HTMLDivElement>("#monaco-editor")!;
       this.editor = monaco.editor.create(editorElement, {
-        value: ``,
+        value: code,
         language: "mermaid",
         theme: "mermaid",
         minimap: { enabled: false },
         scrollBeyondLastLine: false,
         automaticLayout: true,
+      });
+
+      monaco.editor.addEditorAction({
+        id: "monacopilot.triggerCompletion",
+        label: "Complete Code",
+        contextMenuGroupId: "navigation",
+        keybindings: [
+          monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Space,
+        ],
+        run: () => {},
       });
     }
 
@@ -144,18 +167,6 @@ class MermaidEditor {
         awareness
       );
     }
-
-    this.previewPane = document.querySelector<HTMLDivElement>("#preview-pane")!;
-    this.mermaidPreview =
-      document.querySelector<HTMLDivElement>("#mermaid-preview")!;
-    this.container = document.querySelector(".container")!;
-    this.editorPane = document.querySelector(".editor-pane")!;
-    this.handle = document.querySelector(".resize-handle")!;
-    this.errorOverlay = document.querySelector(".error-overlay")!;
-    this.exportButton =
-      document.querySelector<HTMLButtonElement>("#export-btn")!;
-    this.exportPngButton =
-      document.querySelector<HTMLButtonElement>("#export-png-btn")!;
   }
 
   private initializeMermaid(): void {
@@ -247,25 +258,14 @@ class MermaidEditor {
     this.updateTransform();
   }
 
-  private loadDiagramFromURL(): void {
+  private loadDiagramFromURL(): string {
     const hash = window.location.hash;
     if (!hash) {
-      return;
+      return "";
     }
 
-    try {
-      const compressedCode = hash.slice(1);
-      const code = LZString.decompressFromEncodedURIComponent(compressedCode);
-      if (code) {
-        if (this.editor) {
-          this.editor.setValue(code);
-        } else {
-          this.renderDiagram(code);
-        }
-      }
-    } catch (error) {
-      console.error("Failed to decompress diagram from URL:", error);
-    }
+    const compressedCode = hash.slice(1);
+    return LZString.decompressFromEncodedURIComponent(compressedCode);
   }
 
   private setupResizeListeners(): void {
@@ -346,9 +346,6 @@ class MermaidEditor {
     if (!hash) return;
 
     this.loadSavedEditorWidth();
-    if (!this.roomId) {
-      this.loadDiagramFromURL();
-    }
   }
 
   private loadSavedEditorWidth(): void {

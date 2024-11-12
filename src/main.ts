@@ -689,11 +689,14 @@ class MermaidEditor {
       inputField.value = "";
     } catch (error) {
       console.error("Error processing prompt:", error);
-      this.showError("Failed to process prompt with AI");
+      this.generationStatus.textContent =
+        "❌ Failed to process prompt with AI. Check your API key";
+      setTimeout(() => {
+        this.generationStatus.textContent = "";
+      }, 5000); // Clear error after 5 seconds
     } finally {
       inputField.disabled = false;
       this.editor.updateOptions({ readOnly: false });
-      this.generationStatus.textContent = "";
     }
   }
 }

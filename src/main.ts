@@ -155,10 +155,11 @@ class MermaidEditor {
     const urlParams = new URLSearchParams(window.location.search);
     const hideEditor = urlParams.has("hideEditor");
 
+    // Always setup editor
+    this.setupEditor();
+
     if (hideEditor) {
       this.hideEditorPane();
-    } else {
-      this.setupEditor();
     }
   }
 
@@ -166,14 +167,15 @@ class MermaidEditor {
     const editorPane = document.querySelector<HTMLDivElement>(".editor-pane");
     const resizeHandle =
       document.querySelector<HTMLDivElement>(".resize-handle");
-    if (editorPane) editorPane.style.display = "none";
-    if (resizeHandle) resizeHandle.style.display = "none";
+    if (editorPane) editorPane.style.visibility = "hidden";
+    if (resizeHandle) resizeHandle.style.visibility = "hidden";
   }
 
   private setupEditor(): void {
     const code = this.loadDiagramFromURL();
     const editorElement =
       document.querySelector<HTMLDivElement>("#monaco-editor")!;
+
     this.editor = monaco.editor.create(editorElement, {
       value: code ?? "",
       language: "mermaid",
@@ -182,6 +184,12 @@ class MermaidEditor {
       scrollBeyondLastLine: false,
       automaticLayout: true,
     });
+
+    // Add resize observer to handle container size changes
+    const resizeObserver = new ResizeObserver(() => {
+      this.editor.layout();
+    });
+    resizeObserver.observe(this.editorPane);
 
     this.setupEditorCompletion();
   }
@@ -696,6 +704,7 @@ class MermaidEditor {
       }, 5000); // Clear error after 5 seconds
     } finally {
       inputField.disabled = false;
+      this.generationStatus.textContent = "";
       this.editor.updateOptions({ readOnly: false });
     }
   }

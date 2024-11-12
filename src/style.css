@@ -13,7 +13,7 @@ body {
     flex: 0 0 25%;
     min-width: 0;
     display: flex;
-        flex-direction: column;
+    flex-direction: column;
 }
 
 .preview-pane {

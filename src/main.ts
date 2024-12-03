@@ -167,8 +167,8 @@ class MermaidEditor {
     const editorPane = document.querySelector<HTMLDivElement>(".editor-pane");
     const resizeHandle =
       document.querySelector<HTMLDivElement>(".resize-handle");
-    if (editorPane) editorPane.style.visibility = "hidden";
-    if (resizeHandle) resizeHandle.style.visibility = "hidden";
+    if (editorPane) editorPane.style.display = "none";
+    if (resizeHandle) resizeHandle.style.display = "none";
   }
 
   private setupEditor(): void {

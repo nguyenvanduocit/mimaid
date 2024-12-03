@@ -20,16 +20,10 @@ body {
     flex: 1;
     min-width: 0;
     overflow: hidden;
-    cursor: grab;
-}
-
-.preview-pane:active {
-    cursor: grabbing;
 }
 
 #mermaid-preview {
     display: inline-block;
-    user-select: none;
 }
 
 .editor {
@@ -37,6 +31,8 @@ body {
     flex: 1;
     resize: none;
     border: none;
+    padding: 8px;
+    font-family: monospace;
 }
 
 .resize-handle {
@@ -117,21 +113,23 @@ body {
 }
 
 .input-area {
-    height: 50px;
-    border-top: 1px solid #ccc;
+    flex-grow: 1;
     position: relative;
+    margin-left: 10px;
 }
 
-.input-area textarea {
+.input-area input {
     width: 100%;
     height: 100%;
     border: none;
     resize: none;
     padding: 8px;
-    font-size: 14px;
+    font-size: 13px;
     font-family: inherit;
     outline: none;
-    field-sizing: content;
+    box-sizing: border-box;
+        height: 35px;
+        border-radius: 4px;
 }
 
 .status-bar {
@@ -143,13 +141,6 @@ body {
     background-color: var(--vscode-statusBar-background, #007acc);
     font-size: 12px;
     border-bottom: 1px solid var(--vscode-statusBar-border, #0066ac);
-}
-
-.status-bar-left,
-.status-bar-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
 .settings-dialog {
@@ -197,4 +188,17 @@ body {
     margin-left: 10px;
     color: #ffffff;
     font-size: 12px;
+    flex-grow: 1;
+    }
+    
+    #settings-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+    }
+    
+    #settings-btn svg {
+        width: 20px;
+        height: 20px;
 }

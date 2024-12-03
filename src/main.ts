@@ -13,42 +13,6 @@ import Anthropic from "@anthropic-ai/sdk";
 
 // Call the configuration function before creating the editor
 configureMermaidLanguage();
-
-document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-  <div class="container">
-    <div class="editor-pane">
-      <div class="status-bar">
-        <div class="status-bar-left">
-          <button id="settings-btn" class="button" title="Settings">Settings</button>
-          <div id="settings-dialog" class="settings-dialog hidden">
-            <div class="settings-content">
-              <label for="api-token">Anthropic API Token:</label>
-              <input type="password" id="api-token" />
-              <button id="save-settings" class="button">Save</button>
-            </div>
-          </div>
-          <span id="generation-status" class="status-text"></span>
-        </div>
-        <div class="status-bar-right">
-        </div>
-      </div>
-      <div id="monaco-editor" class="editor"></div>
-      <div id="input-area" class="input-area">
-        <textarea id="input-field" placeholder="Enter your prompt here..."></textarea>
-      </div>
-    </div>
-    <div class="resize-handle"></div>
-    <div class="preview-pane" id="preview-pane">
-      <div id="mermaid-preview"></div>
-      <pre class="error-overlay"></pre>
-      <div class="floating-controls">
-        <button id="export-btn" title="Export as SVG">SVG</button>
-        <button id="export-png-btn" title="Export as PNG">PNG</button>
-      </div>
-    </div>
-  </div>
-`;
-
 // Add interfaces
 interface EditorState {
   scale: number;
@@ -72,7 +36,7 @@ interface EditorConfig {
 // Configuration object
 const CONFIG: EditorConfig = {
   minScale: 0.5,
-  maxScale: 5,
+  maxScale: 20,
   minWidth: 20,
   zoomFactor: 0.1,
 };
@@ -149,6 +113,7 @@ class MermaidEditor {
 
     this.generationStatus =
       document.querySelector<HTMLSpanElement>("#generation-status")!;
+    this.generationStatus.style.display = "none";
   }
 
   private handleEditorVisibility(): void {
@@ -270,9 +235,11 @@ class MermaidEditor {
       if (!apiToken) {
         this.generationStatus.textContent =
           "⚠️ Please set your Anthropic API key in settings to use AI features";
+        this.generationStatus.style.display = "block";
         if (inputArea) inputArea.style.display = "none";
       } else {
         this.generationStatus.textContent = "";
+        this.generationStatus.style.display = "none";
         if (inputArea) inputArea.style.display = "block";
       }
 
@@ -628,7 +595,8 @@ class MermaidEditor {
   private async handleSubmit(): Promise<void> {
     const inputField =
       document.querySelector<HTMLTextAreaElement>("#input-field");
-    if (!inputField) return;
+    const inputArea = document.querySelector<HTMLDivElement>("#input-area");
+    if (!inputField || !inputArea) return;
 
     let prompt = inputField.value.trim();
     if (!prompt) return;
@@ -636,7 +604,10 @@ class MermaidEditor {
     try {
       this.editor.updateOptions({ readOnly: true });
       inputField.disabled = true;
+      inputArea.style.display = "none";
+      this.generationStatus.style.display = "block";
       this.generationStatus.textContent = "AI is generating...";
+      inputField.style.opacity = "0.5";
 
       const currentCode = this.editor.getValue();
 
@@ -698,14 +669,17 @@ class MermaidEditor {
       inputField.value = "";
     } catch (error) {
       console.error("Error processing prompt:", error);
+      this.generationStatus.style.display = "block";
       this.generationStatus.textContent =
         "❌ Failed to process prompt with AI. Check your API key";
       setTimeout(() => {
-        this.generationStatus.textContent = "";
-      }, 5000); // Clear error after 5 seconds
+        this.generationStatus.style.display = "none";
+      }, 5000);
     } finally {
       inputField.disabled = false;
-      this.generationStatus.textContent = "";
+      inputArea.style.display = "block";
+      inputField.style.opacity = "1";
+      this.generationStatus.style.display = "none";
       this.editor.updateOptions({ readOnly: false });
     }
   }

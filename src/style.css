@@ -1,5 +1,6 @@
 body {
     overflow: hidden;
+    overscroll-behavior: none;
 }
 
 .container {
@@ -7,6 +8,7 @@ body {
     height: 100vh;
     width: 100vw;
     overflow: hidden;
+    contain: layout size;
 }
 
 .editor-pane {
@@ -14,16 +16,22 @@ body {
     min-width: 0;
     display: flex;
     flex-direction: column;
+    contain: layout style;
+        will-change: flex-basis;
 }
 
 .preview-pane {
     flex: 1;
     min-width: 0;
     overflow: hidden;
+    contain: layout style;
+        content-visibility: auto;
 }
 
 #mermaid-preview {
     display: inline-block;
+    transform: translate3d(0, 0, 0);
+        will-change: transform;
 }
 
 .editor {
@@ -54,12 +62,13 @@ body {
 }
 
 .floating-controls {
-    position: absolute;
+    position: fixed;
     bottom: 15px;
     right: 15px;
     display: flex;
     gap: 8px;
     z-index: 100;
+    transform: translate3d(0, 0, 0);
 }
 
 .button {
@@ -72,6 +81,8 @@ body {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     background: rgba(255, 255, 255, 0.8);
+    transform: translate3d(0, 0, 0);
+        transition: background-color 0.2s;
 }
 
 .button:hover {

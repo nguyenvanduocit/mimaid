@@ -9,6 +9,17 @@ import { AIHandler } from "./ai-handler";
 import { CollaborationHandler } from "./collaboration";
 import { debounce, loadDiagramFromURL, generateDiagramHash, getStoredEditorWidth, setStoredEditorWidth } from "./utils";
 
+// Lazy load Monaco editor
+let monacoInstance: typeof monaco | null = null;
+async function loadMonaco() {
+  if (!monacoInstance) {
+    const monaco = await import("monaco-editor");
+    monacoInstance = monaco;
+    return monaco;
+  }
+  return monacoInstance;
+}
+
 // Call the configuration function before creating the editor
 configureMermaidLanguage();
 
@@ -53,15 +64,16 @@ class MermaidEditor {
       errorOverlay: document.querySelector(".error-overlay")!,
       exportButton: document.querySelector<HTMLButtonElement>("#export-btn")!,
       exportPngButton: document.querySelector<HTMLButtonElement>("#export-png-btn")!,
+      zoomInButton: document.querySelector<HTMLButtonElement>("#zoom-in-btn")!,
+      zoomOutButton: document.querySelector<HTMLButtonElement>("#zoom-out-btn")!,
       generationStatus: document.querySelector<HTMLSpanElement>("#generation-status")!
     };
 
-    this.elements.exportButton.classList.add("button");
-    this.elements.exportPngButton.classList.add("button");
+    this.elements.generationStatus = document.querySelector<HTMLSpanElement>("#generation-status")!;
+    this.elements.generationStatus.style.display = "none";
 
     const settingsButton = document.querySelector<HTMLButtonElement>("#settings-btn")!;
     settingsButton.classList.add("button");
-    this.elements.generationStatus.style.display = "none";
   }
 
   private handleEditorVisibility(): void {
@@ -80,24 +92,29 @@ class MermaidEditor {
     this.elements.handle.style.display = "none";
   }
 
-  private setupEditor(): void {
-    const code = loadDiagramFromURL();
-    const editorElement = document.querySelector<HTMLDivElement>("#monaco-editor")!;
+  private async setupEditor(): Promise<void> {
+    const code = loadDiagramFromURL() || "";
+    const editorElement = document.querySelector<HTMLDivElement>("#monaco-editor");
+    
+    if (!editorElement) return;
 
+    const monaco = await loadMonaco();
     this.editor = monaco.editor.create(editorElement, {
-      value: code ?? "",
+      value: code,
       ...MONACO_CONFIG
     });
 
     const resizeObserver = new ResizeObserver(() => {
-      this.editor.layout();
+      requestAnimationFrame(() => {
+        this.editor.layout();
+      });
     });
     resizeObserver.observe(this.elements.editorPane);
 
     this.setupHandlers();
   }
 
-  private setupHandlers(): void {
+  private async setupHandlers(): Promise<void> {
     const inputField = document.querySelector<HTMLTextAreaElement>("#input-field")!;
     const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
 
@@ -107,8 +124,12 @@ class MermaidEditor {
       generationStatus: this.elements.generationStatus
     });
 
-    this.collaborationHandler = new CollaborationHandler(this.editor);
-    this.collaborationHandler.setup();
+    // Lazy load collaboration handler
+    if (window.location.search.includes('room')) {
+      const { CollaborationHandler } = await import('./collaboration');
+      this.collaborationHandler = new CollaborationHandler(this.editor);
+      await this.collaborationHandler.setup();
+    }
   }
 
   private initializeMermaid(): void {
@@ -122,12 +143,14 @@ class MermaidEditor {
 
   private setupEventListeners(): void {
     if (this.editor) {
-      const debouncedUpdatePreview = debounce(this.updatePreview.bind(this), 500);
-      const debouncedGenerateDiagramHash = debounce((code: string) => generateDiagramHash(code), 500);
+      const debouncedUpdatePreview = debounce(this.updatePreview.bind(this), 250);
+      const debouncedGenerateDiagramHash = debounce((code: string) => generateDiagramHash(code), 250);
       
       this.editor.onDidChangeModelContent(() => {
-        debouncedUpdatePreview();
-        debouncedGenerateDiagramHash(this.editor.getValue());
+        requestAnimationFrame(() => {
+          debouncedUpdatePreview();
+          debouncedGenerateDiagramHash(this.editor.getValue());
+        });
       });
       
       this.setupResizeListeners();
@@ -137,6 +160,8 @@ class MermaidEditor {
     this.setupPanZoomListeners();
     this.elements.exportButton.addEventListener("click", () => this.exportToSvg());
     this.elements.exportPngButton.addEventListener("click", () => this.exportToPng());
+    this.elements.zoomInButton.addEventListener("click", () => this.handleZoomButtonClick(EDITOR_CONFIG.zoomFactor));
+    this.elements.zoomOutButton.addEventListener("click", () => this.handleZoomButtonClick(-EDITOR_CONFIG.zoomFactor));
     this.setupSettingsListeners();
   }
 
@@ -266,15 +291,28 @@ class MermaidEditor {
         throw new Error("Invalid diagram syntax");
       }
 
-      const result = await mermaid.render("mermaid-diagram", code);
-      this.elements.mermaidPreview.innerHTML = result.svg;
-      this.hideError();
+      // Create a temporary div for rendering
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.visibility = 'hidden';
+      document.body.appendChild(tempDiv);
+      
+      const result = await mermaid.render("mermaid-diagram", code, tempDiv);
+      
+      // Use requestAnimationFrame for DOM updates
+      requestAnimationFrame(() => {
+        this.elements.mermaidPreview.innerHTML = result.svg;
+        this.hideError();
 
-      const isInitialPosition =
-        state.scale === 1 && state.translateX === 0 && state.translateY === 0;
-      if (isInitialPosition) {
-        this.autoFitPreview();
-      }
+        const isInitialPosition =
+          state.scale === 1 && state.translateX === 0 && state.translateY === 0;
+        if (isInitialPosition) {
+          this.autoFitPreview();
+        }
+        
+        // Clean up
+        document.body.removeChild(tempDiv);
+      });
     } catch (error) {
       console.error("Failed to render diagram:", error);
       this.showError(
@@ -348,53 +386,72 @@ class MermaidEditor {
     URL.revokeObjectURL(url);
   }
 
-  private exportToPng(): void {
+  private async exportToPng(): Promise<void> {
     const svg = this.elements.mermaidPreview.querySelector("svg");
     if (!svg) return;
 
-    const viewBox = svg.getAttribute("viewBox")?.split(" ").map(Number);
-    const svgWidth = viewBox
-      ? viewBox[2]
-      : parseFloat(svg.getAttribute("width") || "0");
-    const svgHeight = viewBox
-      ? viewBox[3]
-      : parseFloat(svg.getAttribute("height") || "0");
-
-    const minDimension = 1000;
-    const scaleX = minDimension / svgWidth;
-    const scaleY = minDimension / svgHeight;
-    const scale = Math.max(scaleX, scaleY);
-
-    const canvas = document.createElement("canvas");
-    canvas.width = svgWidth * scale;
-    canvas.height = svgHeight * scale;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.scale(scale, scale);
-
     const svgData = new XMLSerializer().serializeToString(svg);
-    const svgBase64 = btoa(unescape(encodeURIComponent(svgData)));
-    const dataUrl = `data:image/svg+xml;base64,${svgBase64}`;
-
     const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0);
+    
+    // Create blob URL for better memory management
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    
+    try {
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = url;
+      });
 
-      try {
-        const pngUrl = canvas.toDataURL("image/png");
-        const a = document.createElement("a");
-        a.href = pngUrl;
-        a.download = "mermaid-diagram.png";
-        a.click();
-      } catch (error) {
-        console.error("Error exporting PNG:", error);
-      }
-    };
-    img.src = dataUrl;
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      // Set canvas size based on SVG viewBox
+      const viewBox = svg.getAttribute("viewBox")?.split(" ").map(Number);
+      canvas.width = viewBox ? viewBox[2] : parseFloat(svg.getAttribute("width") || "800");
+      canvas.height = viewBox ? viewBox[3] : parseFloat(svg.getAttribute("height") || "600");
+
+      // Use high-quality scaling
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      
+      // Draw image and export
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const pngUrl = canvas.toDataURL("image/png");
+      
+      const a = document.createElement("a");
+      a.href = pngUrl;
+      a.download = "mermaid-diagram.png";
+      a.click();
+    } catch (error) {
+      console.error("Error exporting PNG:", error);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   }
+
+  private handleZoomButtonClick = (delta: number): void => {
+    const newScale = Math.min(
+      Math.max(state.scale * (1 + delta), EDITOR_CONFIG.minScale),
+      EDITOR_CONFIG.maxScale
+    );
+
+    // Calculate zoom from center of preview
+    const rect = this.elements.mermaidPreview.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const dx = centerX - centerX * (newScale / state.scale);
+    const dy = centerY - centerY * (newScale / state.scale);
+
+    state.translateX += dx;
+    state.translateY += dy;
+    state.scale = newScale;
+
+    this.updateTransform();
+  };
 }
 
 // Initialize the editor

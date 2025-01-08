@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A lightweight, browser-based Mermaid diagram editor with real-time preview" />
+    <link rel="preload" href="/src/main.ts" as="script" type="module" />
+    <link rel="preload" href="/src/modern-normalize.css" as="style" />
+    <link rel="preload" href="/src/style.css" as="style" />
     <title>Mimaid</title>
   </head>
   <body>
@@ -37,8 +41,10 @@
           <div id="mermaid-preview"></div>
           <pre class="error-overlay"></pre>
           <div class="floating-controls">
-            <button id="export-btn" title="Export as SVG">SVG</button>
-            <button id="export-png-btn" title="Export as PNG">PNG</button>
+            <button id="zoom-in-btn" class="button" title="Zoom In">+</button>
+            <button id="zoom-out-btn" class="button" title="Zoom Out">-</button>
+            <button id="export-btn" class="button" title="Export as SVG">SVG</button>
+            <button id="export-png-btn" class="button" title="Export as PNG">PNG</button>
           </div>
         </div>
       </div>

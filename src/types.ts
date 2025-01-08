@@ -26,6 +26,8 @@ export interface EditorElements {
   errorOverlay: HTMLDivElement;
   exportButton: HTMLButtonElement;
   exportPngButton: HTMLButtonElement;
+  zoomInButton: HTMLButtonElement;
+  zoomOutButton: HTMLButtonElement;
   generationStatus: HTMLSpanElement;
 }
 

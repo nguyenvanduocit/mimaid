@@ -28,7 +28,7 @@ export class AIHandler {
   }
 
   async handleSubmit(): Promise<void> {
-    const { inputField, inputArea, generationStatus } = this.elements;
+    const { inputField, generationStatus } = this.elements;
     let prompt = inputField.value.trim();
     if (!prompt) return;
 

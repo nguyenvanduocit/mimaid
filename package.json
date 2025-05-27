@@ -13,9 +13,10 @@
     "vite": "^5.4.10"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.32.1",
+    "@anthropic-ai/sdk": "^0.37.0",
     "@liveblocks/client": "^2.11.0",
     "@liveblocks/yjs": "^2.11.0",
+    "@stagewise/toolbar": "^0.2.1",
     "lz-string": "^1.5.0",
     "mermaid": "^11.4.0",
     "monaco-editor": "^0.52.0",

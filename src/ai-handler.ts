@@ -47,6 +47,10 @@ export class AIHandler {
         model: AI_CONFIG.model,
         temperature: AI_CONFIG.temperature,
         stream: true,
+        thinking: {
+          type: AI_CONFIG.thinking.type,
+          budget_tokens: AI_CONFIG.thinking.budgetTokens,
+        },
       });
 
       await this.handleStream(stream);

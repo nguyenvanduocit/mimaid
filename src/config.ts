@@ -9,9 +9,13 @@ export const EDITOR_CONFIG: EditorConfig = {
 
 export const AI_CONFIG: AIConfig = {
   apiKey: localStorage.getItem('anthropicApiKey') || import.meta.env.VITE_ANTHROPIC_API_KEY,
-  model: 'claude-3-5-sonnet-20241022',
-  temperature: 0.3,
-  maxTokens: 8192,
+  model: 'claude-3-7-sonnet-20250219',
+  temperature:1,
+  maxTokens: 64000,
+  thinking: {
+    type: "enabled",
+    budgetTokens: 15139
+  }
 };
 
 export const MERMAID_CONFIG = {

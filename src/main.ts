@@ -8,7 +8,7 @@ import { EDITOR_CONFIG, MONACO_CONFIG, MERMAID_CONFIG } from "./config";
 import { AIHandler } from "./ai-handler";
 import { CollaborationHandler } from "./collaboration";
 import { debounce, loadDiagramFromURL, generateDiagramHash, getStoredEditorWidth, setStoredEditorWidth } from "./utils";
-
+import "./debug";
 // Lazy load Monaco editor
 let monacoInstance: typeof monaco | null = null;
 async function loadMonaco() {
@@ -136,7 +136,7 @@ class MermaidEditor {
     mermaid.initialize(MERMAID_CONFIG);
 
     const code = loadDiagramFromURL();
-    if (code?.trim().length > 0) {
+    if (code && code.trim().length > 0) {
       this.renderDiagram(code);
     }
   }
@@ -153,9 +153,11 @@ class MermaidEditor {
         });
       });
       
-      this.setupResizeListeners();
-      this.setupInputListeners();
+     
     }
+
+    this.setupResizeListeners();
+    this.setupInputListeners();
 
     this.setupPanZoomListeners();
     this.elements.exportButton.addEventListener("click", () => this.exportToSvg());
@@ -187,12 +189,26 @@ class MermaidEditor {
 
     settingsBtn.addEventListener("click", () => {
       settingsDialog.classList.toggle("hidden");
+      if (!settingsDialog.classList.contains("hidden")) {
+        apiTokenInput.focus();
+      }
     });
 
     saveSettingsBtn.addEventListener("click", () => {
       const apiToken = apiTokenInput.value.trim();
       localStorage.setItem("anthropicApiKey", apiToken);
       settingsDialog.classList.add("hidden");
+      
+      // Show visual feedback 
+      const statusMessage = document.createElement("div");
+      statusMessage.textContent = "Settings saved successfully!";
+      statusMessage.className = "settings-saved-message";
+      document.body.appendChild(statusMessage);
+      
+      setTimeout(() => {
+        statusMessage.classList.add("fade-out");
+        setTimeout(() => document.body.removeChild(statusMessage), 500);
+      }, 2000);
     });
 
     document.addEventListener("click", (e) => {
@@ -201,6 +217,13 @@ class MermaidEditor {
         !settingsBtn.contains(e.target as Node) &&
         !settingsDialog.classList.contains("hidden")
       ) {
+        settingsDialog.classList.add("hidden");
+      }
+    });
+
+    // Close on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !settingsDialog.classList.contains("hidden")) {
         settingsDialog.classList.add("hidden");
       }
     });
@@ -456,3 +479,4 @@ class MermaidEditor {
 
 // Initialize the editor
 new MermaidEditor();
+

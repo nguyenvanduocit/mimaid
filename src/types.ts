@@ -36,4 +36,8 @@ export interface AIConfig {
   model: string;
   temperature: number;
   maxTokens: number;
+  thinking: {
+    type: "enabled" | "disabled";
+    budgetTokens: number;
+  };
 } 

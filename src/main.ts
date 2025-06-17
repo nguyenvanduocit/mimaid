@@ -304,8 +304,6 @@ class MermaidEditor {
             controlIconsEnabled: false,
             fit: true,
             center: true,
-            minZoom: EDITOR_CONFIG.minScale,
-            maxZoom: EDITOR_CONFIG.maxScale,
           });
         }
         

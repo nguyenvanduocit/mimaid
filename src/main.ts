@@ -3,7 +3,7 @@ import svgPanZoom from "svg-pan-zoom";
 import "./modern-normalize.css";
 import "./style.css";
 import { EditorState, EditorElements } from "./types";
-import { EDITOR_CONFIG, MONACO_CONFIG, MERMAID_CONFIG } from "./config";
+import { EDITOR_CONFIG, MONACO_CONFIG, MERMAID_CONFIG, AI_CONFIG } from "./config";
 import { AIHandler } from "./ai-handler";
 import { CollaborationHandler } from "./collaboration";
 import { debounce, loadDiagramFromURL, generateDiagramHash, getStoredEditorWidth, setStoredEditorWidth } from "./utils";
@@ -199,6 +199,7 @@ class MermaidEditor {
     saveSettingsBtn.addEventListener("click", () => {
       const apiToken = apiTokenInput.value.trim();
       localStorage.setItem("googleAiApiKey", apiToken);
+      AI_CONFIG.apiKey = apiToken;
       settingsDialog.classList.add("hidden");
       
       // Update input area visibility after saving settings

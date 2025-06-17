@@ -24,6 +24,9 @@
             <span id="generation-status" class="status-text"></span>
             <div id="input-area" class="input-area">
               <input type="text" id="input-field" placeholder="Enter your prompt here and press enter..." />
+              <div id="api-key-message" class="api-key-message hidden">
+                <span>⚠️ Please configure your Google AI API key in settings to use AI features</span>
+              </div>
             </div>
     
             <div id="settings-dialog" class="settings-dialog hidden">
@@ -32,8 +35,8 @@
                   <label for="api-token">Google AI API Token:</label>
                   <input type="password" id="api-token" placeholder="Enter your API token" autocomplete="off" />
                   <small class="form-hint">Your token is stored locally and never sent to our servers</small>
-                  </div>
-                  <button id="save-settings" class="button">Save Settings</button>
+                </div>
+                <button id="save-settings" class="save-button">Save Settings</button>
               </div>
             </div>
           </div>

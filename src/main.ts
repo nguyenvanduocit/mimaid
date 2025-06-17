@@ -128,6 +128,9 @@ class MermaidEditor {
       generationStatus: this.elements.generationStatus
     });
 
+    // Check API key and update input area
+    this.updateInputAreaBasedOnApiKey();
+
     // Lazy load collaboration handler
     if (window.location.search.includes('room')) {
       const { CollaborationHandler } = await import('./collaboration');
@@ -181,6 +184,20 @@ class MermaidEditor {
     }
   }
 
+  private updateInputAreaBasedOnApiKey(): void {
+    const inputField = document.querySelector<HTMLInputElement>("#input-field")!;
+    const apiKeyMessage = document.querySelector<HTMLDivElement>("#api-key-message")!;
+    const apiKey = localStorage.getItem("googleAiApiKey") || "";
+
+    if (apiKey.trim() === "") {
+      inputField.classList.add("hidden");
+      apiKeyMessage.classList.remove("hidden");
+    } else {
+      inputField.classList.remove("hidden");
+      apiKeyMessage.classList.add("hidden");
+    }
+  }
+
   private setupSettingsListeners(): void {
     const settingsBtn = document.querySelector<HTMLButtonElement>("#settings-btn")!;
     const settingsDialog = document.querySelector<HTMLDivElement>("#settings-dialog")!;
@@ -200,6 +217,9 @@ class MermaidEditor {
       const apiToken = apiTokenInput.value.trim();
       localStorage.setItem("googleAiApiKey", apiToken);
       settingsDialog.classList.add("hidden");
+      
+      // Update input area based on new API key
+      this.updateInputAreaBasedOnApiKey();
       
       // Show visual feedback 
       const statusMessage = document.createElement("div");

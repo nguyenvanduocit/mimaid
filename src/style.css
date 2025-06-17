@@ -98,6 +98,14 @@ body {
         /* Base minimum width on the height (font size + padding) */
 }
 
+/* Ensure zoom buttons are perfect squares */
+.zoom-button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font-size: 1rem;
+}
+
 .button:hover {
     background: #f0f0f0;
 }

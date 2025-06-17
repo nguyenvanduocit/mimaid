@@ -1,13 +1,5 @@
 export interface EditorState {
-  scale: number;
-  translateX: number;
-  translateY: number;
-  isDragging: boolean;
   isResizing: boolean;
-  startX: number;
-  startY: number;
-  zoomTranslateX: number;
-  zoomTranslateY: number;
 }
 
 export interface EditorConfig {

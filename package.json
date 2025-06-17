@@ -23,6 +23,7 @@
     "mermaid": "^11.4.0",
     "mime": "^4.0.7",
     "monaco-editor": "^0.52.0",
+    "svg-pan-zoom": "^3.6.2",
     "y-monaco": "^0.1.6",
     "y-protocols": "^1.0.6",
     "yjs": "^13.6.20"

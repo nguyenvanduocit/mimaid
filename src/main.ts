@@ -48,6 +48,7 @@ class MermaidEditor {
     this.initializeMermaid();
     this.setupEventListeners();
     this.loadInitialState();
+    this.updateInputAreaVisibility();
   }
 
   private initializeDOM(): void {
@@ -122,14 +123,15 @@ class MermaidEditor {
     const inputField = document.querySelector<HTMLTextAreaElement>("#input-field")!;
     const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
 
-    this.aiHandler = new AIHandler(this.editor, {
-      inputField,
-      inputArea,
-      generationStatus: this.elements.generationStatus
-    });
-
-    // Check API key and update input area
-    this.updateInputAreaBasedOnApiKey();
+    // Only initialize AI handler if API key is available
+    const apiKey = localStorage.getItem("googleAiApiKey") || "";
+    if (apiKey && apiKey.trim().length > 0) {
+      this.aiHandler = new AIHandler(this.editor, {
+        inputField,
+        inputArea,
+        generationStatus: this.elements.generationStatus
+      });
+    }
 
     // Lazy load collaboration handler
     if (window.location.search.includes('room')) {
@@ -178,23 +180,11 @@ class MermaidEditor {
       inputField.addEventListener("keydown", async (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
-          await this.aiHandler.handleSubmit();
+          if (this.aiHandler) {
+            await this.aiHandler.handleSubmit();
+          }
         }
       });
-    }
-  }
-
-  private updateInputAreaBasedOnApiKey(): void {
-    const inputField = document.querySelector<HTMLInputElement>("#input-field")!;
-    const apiKeyMessage = document.querySelector<HTMLDivElement>("#api-key-message")!;
-    const apiKey = localStorage.getItem("googleAiApiKey") || "";
-
-    if (apiKey.trim() === "") {
-      inputField.classList.add("hidden");
-      apiKeyMessage.classList.remove("hidden");
-    } else {
-      inputField.classList.remove("hidden");
-      apiKeyMessage.classList.add("hidden");
     }
   }
 
@@ -218,8 +208,23 @@ class MermaidEditor {
       localStorage.setItem("googleAiApiKey", apiToken);
       settingsDialog.classList.add("hidden");
       
-      // Update input area based on new API key
-      this.updateInputAreaBasedOnApiKey();
+      // Update input area visibility after saving settings
+      this.updateInputAreaVisibility();
+      
+      // Re-initialize AI handler if API key is now available
+      if (apiToken && apiToken.trim().length > 0) {
+        const inputField = document.querySelector<HTMLTextAreaElement>("#input-field")!;
+        const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
+        
+        this.aiHandler = new AIHandler(this.editor, {
+          inputField,
+          inputArea,
+          generationStatus: this.elements.generationStatus
+        });
+      } else {
+        // Clear AI handler if API key is removed
+        this.aiHandler = null as any;
+      }
       
       // Show visual feedback 
       const statusMessage = document.createElement("div");
@@ -497,6 +502,43 @@ class MermaidEditor {
 
     this.updateTransform();
   };
+
+  private updateInputAreaVisibility(): void {
+    const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
+    const apiKey = localStorage.getItem("googleAiApiKey") || "";
+    
+    if (!apiKey || apiKey.trim().length === 0) {
+      // Show message instead of input field
+      inputArea.innerHTML = `
+        <div class="api-key-warning">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span>Please set up your Google AI API key in settings to use AI features</span>
+        </div>
+      `;
+    } else {
+      // Show input field
+      inputArea.innerHTML = `
+        <input type="text" id="input-field" placeholder="Enter your prompt here and press enter..." />
+      `;
+      
+      // Re-attach event listeners to the new input field
+      const newInputField = document.querySelector<HTMLInputElement>("#input-field");
+      if (newInputField) {
+        newInputField.addEventListener("keydown", async (e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            if (this.aiHandler) {
+              await this.aiHandler.handleSubmit();
+            }
+          }
+        });
+      }
+    }
+  }
 }
 
 // Initialize the editor

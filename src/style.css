@@ -149,27 +149,6 @@ body {
         border-radius: 4px;
 }
 
-.api-key-message {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 35px;
-    background-color: #fff3cd;
-    border: 1px solid #ffeaa7;
-    border-radius: 4px;
-    color: #856404;
-    font-size: 13px;
-    padding: 8px;
-    box-sizing: border-box;
-}
-
-.api-key-message.hidden {
-    display: none;
-}
-
-.hidden {
-    display: none !important;
-}
 .status-bar {
     position: relative;
     display: flex;
@@ -349,4 +328,28 @@ body {
             to {
                 opacity: 0;
             }
+}
+.api-key-warning {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    color: #856404;
+    font-size: 13px;
+    width: 100%;
+    box-sizing: border-box;
+    height: 35px;
+}
+
+.api-key-warning svg {
+    flex-shrink: 0;
+    color: #f39c12;
+}
+
+.api-key-warning span {
+    flex-grow: 1;
+    line-height: 1.2;
 }

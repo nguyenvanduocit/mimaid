@@ -1,6 +1,5 @@
-import * as monaco from "monaco-editor";
 // Register Mermaid language configuration
-export const configureMermaidLanguage = () => {
+export const configureMermaidLanguage = (monaco: any) => {
   const requirementDiagrams = [
     "requirement",
     "functionalRequirement",
@@ -250,7 +249,7 @@ export const configureMermaidLanguage = () => {
       next: "@configDirective",
       nextEmbedded: "javascript",
     },
-  ] as monaco.languages.IShortMonarchLanguageRule1;
+      ] as any;
 
   // Register the language
   monaco.languages.register({ id: "mermaid" });
@@ -670,7 +669,7 @@ export const configureMermaidLanguage = () => {
 
   // Register completion provider
   monaco.languages.registerCompletionItemProvider("mermaid", {
-    provideCompletionItems: (model, position) => {
+    provideCompletionItems: (model: any, position: any) => {
       const word = model.getWordUntilPosition(position);
       const range = {
         startLineNumber: position.lineNumber,

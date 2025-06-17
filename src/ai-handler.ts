@@ -1,10 +1,9 @@
-import { createModelContent, createPartFromUri, createUserContent, GenerateContentParameters, GenerateContentResponse, GoogleGenAI } from "@google/genai";
+import { createModelContent, createUserContent, GenerateContentParameters, GenerateContentResponse, GoogleGenAI } from "@google/genai";
 import { AI_CONFIG } from "./config";
-import * as monaco from "monaco-editor";
 
 export class AIHandler {
   private client: GoogleGenAI;
-  private editor: monaco.editor.IStandaloneCodeEditor;
+  private editor: any; // Use any since we're dynamically importing Monaco
   private previousPrompt: string;
   private elements: {
     inputField: HTMLTextAreaElement;
@@ -13,7 +12,7 @@ export class AIHandler {
   };
 
   constructor(
-    editor: monaco.editor.IStandaloneCodeEditor,
+    editor: any, // Use any since we're dynamically importing Monaco
     elements: {
       inputField: HTMLTextAreaElement;
       inputArea: HTMLDivElement;

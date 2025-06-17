@@ -1,27 +1,28 @@
 import mermaid from "mermaid";
 import "./modern-normalize.css";
 import "./style.css";
-import * as monaco from "monaco-editor";
-import { configureMermaidLanguage } from "./configMermaidLanguage";
 import { EditorState, EditorElements } from "./types";
 import { EDITOR_CONFIG, MONACO_CONFIG, MERMAID_CONFIG } from "./config";
 import { AIHandler } from "./ai-handler";
 import { CollaborationHandler } from "./collaboration";
 import { debounce, loadDiagramFromURL, generateDiagramHash, getStoredEditorWidth, setStoredEditorWidth } from "./utils";
 //import "./debug";
+
 // Lazy load Monaco editor
-let monacoInstance: typeof monaco | null = null;
+let monacoInstance: any | null = null;
 async function loadMonaco() {
   if (!monacoInstance) {
     const monaco = await import("monaco-editor");
     monacoInstance = monaco;
+    
+    // Configure Mermaid language after Monaco is loaded
+    const { configureMermaidLanguage } = await import("./configMermaidLanguage");
+    configureMermaidLanguage(monaco);
+    
     return monaco;
   }
   return monacoInstance;
 }
-
-// Call the configuration function before creating the editor
-configureMermaidLanguage();
 
 // State management
 const state: EditorState = {
@@ -37,7 +38,7 @@ const state: EditorState = {
 };
 
 class MermaidEditor {
-  private editor!: monaco.editor.IStandaloneCodeEditor;
+  private editor!: any; // Change type to any since we're dynamically importing
   private elements!: EditorElements;
   private aiHandler!: AIHandler;
   private collaborationHandler!: CollaborationHandler;

@@ -3,13 +3,12 @@ import { LiveblocksYjsProvider } from "@liveblocks/yjs";
 import * as Y from "yjs";
 import { MonacoBinding } from "y-monaco";
 import { Awareness } from "y-protocols/awareness";
-import * as monaco from "monaco-editor";
 import { getUserNameFromURL, getRandomColor, getRoomIdFromURL } from "./utils";
 
 export class CollaborationHandler {
-  private editor: monaco.editor.IStandaloneCodeEditor;
+  private editor: any; // Use any since we're dynamically importing Monaco
 
-  constructor(editor: monaco.editor.IStandaloneCodeEditor) {
+  constructor(editor: any) { // Use any since we're dynamically importing Monaco
     this.editor = editor;
   }
 
@@ -34,7 +33,7 @@ export class CollaborationHandler {
 
     new MonacoBinding(
       yText,
-      this.editor.getModel() as monaco.editor.ITextModel,
+      this.editor.getModel() as any, // Use any instead of monaco.editor.ITextModel
       new Set([this.editor]),
       awareness
     );

@@ -50,7 +50,7 @@ Setup resize handle cho split pane.
 Setup pan và zoom functionality cho preview pane.
 
 #### `handleZoom(e: WheelEvent): void`
-Xử lý zoom events trên preview pane.
+Xử lý zoom events trên preview pane. Uses preview pane coordinates for consistent behavior with button zoom.
 
 #### `updateTransform(): void`
 Cập nhật CSS transform cho preview pane.

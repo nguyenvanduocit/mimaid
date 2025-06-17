@@ -272,15 +272,21 @@ class MermaidEditor {
   }
 
   private setupPanZoomListeners(): void {
-    this.elements.mermaidPreview.addEventListener("wheel", this.handleZoom);
-    this.elements.mermaidPreview.addEventListener("mousedown", this.handleDragStart);
+    // Use preview pane for better event handling
+    this.elements.previewPane.addEventListener("wheel", this.handleZoom);
+    this.elements.previewPane.addEventListener("mousedown", this.handleDragStart);
     document.addEventListener("mousemove", this.handleDragMove);
     document.addEventListener("mouseup", this.handleDragEnd);
+    
+    // Prevent context menu on right click for better UX
+    this.elements.previewPane.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
   private handleZoom = (e: WheelEvent): void => {
     e.preventDefault();
-    const rect = this.elements.mermaidPreview.getBoundingClientRect();
+    
+    // Use preview pane coordinates for consistent behavior
+    const rect = this.elements.previewPane.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
@@ -290,6 +296,7 @@ class MermaidEditor {
       EDITOR_CONFIG.maxScale
     );
 
+    // Calculate zoom with mouse position as center point
     const dx = mouseX - mouseX * (newScale / state.scale);
     const dy = mouseY - mouseY * (newScale / state.scale);
 
@@ -329,8 +336,12 @@ class MermaidEditor {
     const totalTranslateX = state.translateX + state.zoomTranslateX;
     const totalTranslateY = state.translateY + state.zoomTranslateY;
 
+    // Use top-left origin for consistent scaling behavior
     this.elements.mermaidPreview.style.transformOrigin = "0 0";
     this.elements.mermaidPreview.style.transform = `translate(${totalTranslateX}px, ${totalTranslateY}px) scale(${state.scale})`;
+    
+    // Ensure the element has proper positioning
+    this.elements.mermaidPreview.style.position = "relative";
   }
 
   private async renderMermaidDiagram(code: string): Promise<void> {
@@ -388,16 +399,21 @@ class MermaidEditor {
     const svg = this.elements.mermaidPreview.querySelector("svg");
     if (!svg) return;
 
+    // Reset transform to get actual SVG dimensions
+    this.elements.mermaidPreview.style.transform = "none";
+    
     const svgRect = svg.getBoundingClientRect();
     const previewPaneRect = this.elements.previewPane.getBoundingClientRect();
 
+    // Calculate scale to fit with padding
     const scaleX = previewPaneRect.width / svgRect.width;
     const scaleY = previewPaneRect.height / svgRect.height;
     const scale = Math.min(scaleX, scaleY, EDITOR_CONFIG.maxScale) * 0.9;
 
-    state.scale = scale;
-    state.translateX = (previewPaneRect.width - svgRect.width * scale) / 2;
-    state.translateY = (previewPaneRect.height - svgRect.height * scale) / 2;
+    // Center the diagram
+    state.scale = Math.max(scale, EDITOR_CONFIG.minScale);
+    state.translateX = (previewPaneRect.width - svgRect.width * state.scale) / 2;
+    state.translateY = (previewPaneRect.height - svgRect.height * state.scale) / 2;
     state.zoomTranslateX = 0;
     state.zoomTranslateY = 0;
 
@@ -488,11 +504,12 @@ class MermaidEditor {
       EDITOR_CONFIG.maxScale
     );
 
-    // Calculate zoom from center of preview
-    const rect = this.elements.mermaidPreview.getBoundingClientRect();
+    // Calculate zoom from center of preview pane, consistent with wheel zoom
+    const rect = this.elements.previewPane.getBoundingClientRect();
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
 
+    // Use the same calculation as wheel zoom for consistency
     const dx = centerX - centerX * (newScale / state.scale);
     const dy = centerY - centerY * (newScale / state.scale);
 

@@ -191,6 +191,54 @@ import { configureMermaidLanguage } from './configMermaidLanguage';
 configureMermaidLanguage();
 ```
 
+### Zoom and Pan Issues
+
+#### Issue: Zoom breaks diagram positioning (diagram becomes distorted)
+
+**Possible Causes:**
+- Inconsistent zoom calculations between wheel and button zoom
+- Transform origin issues
+- Coordinate system conflicts
+
+**Solutions:**
+
+1. **Reset Zoom and Pan**
+```typescript
+// Reset to initial state
+state.scale = 1;
+state.translateX = 0;
+state.translateY = 0;
+state.zoomTranslateX = 0;
+state.zoomTranslateY = 0;
+this.updateTransform();
+```
+
+2. **Use Auto-fit Feature**
+- Diagram automatically fits when first loaded
+- Auto-fit uses consistent coordinate calculations
+- Resets zoom state properly
+
+3. **Fixed Issues (v1.1.0+)**
+- Zoom buttons now use preview pane coordinates (consistent with wheel zoom)
+- Transform origin set to "0 0" for predictable scaling
+- Better handling of edge cases in auto-fit functionality
+- Event listeners moved to preview pane for better interaction
+
+#### Issue: Pan/drag not working properly
+
+**Solutions:**
+1. **Check Event Propagation**
+```typescript
+// Ensure events are properly bound
+this.elements.previewPane.addEventListener("mousedown", this.handleDragStart);
+```
+
+2. **Verify Drag State**
+```typescript
+console.log('Dragging:', state.isDragging);
+console.log('Start coords:', state.startX, state.startY);
+```
+
 ### Mermaid Rendering Issues
 
 #### Issue: "Error: Parse error on line X"

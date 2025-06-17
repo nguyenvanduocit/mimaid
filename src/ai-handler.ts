@@ -1,10 +1,11 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { createModelContent, createPartFromUri, createUserContent, GenerateContentParameters, GenerateContentResponse, GoogleGenAI } from "@google/genai";
 import { AI_CONFIG } from "./config";
 import * as monaco from "monaco-editor";
 
 export class AIHandler {
-  private client: Anthropic;
+  private client: GoogleGenAI;
   private editor: monaco.editor.IStandaloneCodeEditor;
+  private previousPrompt: string;
   private elements: {
     inputField: HTMLTextAreaElement;
     inputArea: HTMLDivElement;
@@ -21,10 +22,8 @@ export class AIHandler {
   ) {
     this.editor = editor;
     this.elements = elements;
-    this.client = new Anthropic({
-      apiKey: AI_CONFIG.apiKey,
-      dangerouslyAllowBrowser: true,
-    });
+    this.client = new GoogleGenAI({apiKey: AI_CONFIG.apiKey});
+    this.previousPrompt = "";
   }
 
   async handleSubmit(): Promise<void> {
@@ -35,25 +34,44 @@ export class AIHandler {
     try {
       this.setLoadingState(true);
       const currentCode = this.editor.getValue();
+
+      const systemPrompt = "You are a helpful assistant that can help me go create or edit the Mermaid diagram code. ALWAYS wrap the code in ```mermaid tags. Think step by step before responding.";
       
-      if (currentCode) {
-        prompt = `Given this Mermaid diagram:\n\n${currentCode}\n\n${prompt}`;
+      let contents = [
+        createUserContent([
+          systemPrompt
+        ]),
+        createModelContent("Yes, i will create mermaid diagram code for you. Please provide me with the prompt.")
+      ]
+      
+      if (this.previousPrompt) {
+        contents.push(createUserContent([
+          this.previousPrompt
+        ]))
       }
 
-      const stream = await this.client.messages.create({
-        max_tokens: AI_CONFIG.maxTokens,
-        system: "You are a helpful assistant that can help me go create or edit the Mermaid diagram code. wrap the code in ```mermaid tags. Think step by step before responding.",
-        messages: [{ role: "user", content: prompt }],
-        model: AI_CONFIG.model,
-        temperature: AI_CONFIG.temperature,
-        stream: true,
-        thinking: {
-          type: AI_CONFIG.thinking.type,
-          budget_tokens: AI_CONFIG.thinking.budgetTokens,
-        },
-      });
+      if (currentCode) {
+        contents.push(createModelContent(currentCode))
+      }
 
-      await this.handleStream(stream);
+      contents.push(createUserContent([
+        prompt
+      ]))
+
+      const parts: GenerateContentParameters = {
+        model: AI_CONFIG.model,
+        contents: contents,
+        config: {
+          tools: [{urlContext: {}}, {googleSearch: {}}],
+          temperature: AI_CONFIG.temperature,
+          maxOutputTokens: AI_CONFIG.maxTokens
+        },
+      }
+
+
+      const result = await this.client.models.generateContentStream(parts);
+
+      await this.handleStream(result);
       inputField.value = "";
     } catch (error) {
       console.error("Error processing prompt:", error);
@@ -65,17 +83,18 @@ export class AIHandler {
     } finally {
       this.setLoadingState(false);
     }
+
+    this.previousPrompt = prompt;
   }
 
-  private async handleStream(stream: AsyncIterable<any>): Promise<void> {
+  private async handleStream(stream: AsyncGenerator<GenerateContentResponse, any, any>): Promise<void> {
     let isInsideCodeBlock = false;
     let accumulatedCode = "";
     let tempResponse = "";
 
-    for await (const messageStreamEvent of stream) {
-      if (messageStreamEvent.type === "content_block_delta") {
-        const chunk = "text" in messageStreamEvent.delta ? messageStreamEvent.delta.text : "";
-        tempResponse += chunk;
+    for await (const chunk of stream) {
+      if (chunk.text) {
+        tempResponse += chunk.text;
         
         const mermaidMatch = tempResponse.match(/```mermaid\n([\s\S]*?)```/);
         if (mermaidMatch) {
@@ -93,7 +112,7 @@ export class AIHandler {
         }
 
         if (isInsideCodeBlock) {
-          accumulatedCode += chunk;
+          accumulatedCode += chunk.text;
           this.editor.setValue(accumulatedCode);
         }
       }

@@ -8,7 +8,7 @@ import { EDITOR_CONFIG, MONACO_CONFIG, MERMAID_CONFIG } from "./config";
 import { AIHandler } from "./ai-handler";
 import { CollaborationHandler } from "./collaboration";
 import { debounce, loadDiagramFromURL, generateDiagramHash, getStoredEditorWidth, setStoredEditorWidth } from "./utils";
-import "./debug";
+//import "./debug";
 // Lazy load Monaco editor
 let monacoInstance: typeof monaco | null = null;
 async function loadMonaco() {
@@ -111,6 +111,9 @@ class MermaidEditor {
     });
     resizeObserver.observe(this.elements.editorPane);
 
+    // Set up editor-specific event listeners after editor is created
+    this.setupEditorEventListeners();
+
     this.setupHandlers();
   }
 
@@ -141,21 +144,19 @@ class MermaidEditor {
     }
   }
 
-  private setupEventListeners(): void {
-    if (this.editor) {
-      const debouncedUpdatePreview = debounce(this.updatePreview.bind(this), 250);
-      const debouncedGenerateDiagramHash = debounce((code: string) => generateDiagramHash(code), 250);
-      
-      this.editor.onDidChangeModelContent(() => {
-        requestAnimationFrame(() => {
-          debouncedUpdatePreview();
-          debouncedGenerateDiagramHash(this.editor.getValue());
-        });
+  private setupEditorEventListeners(): void {
+    const debouncedUpdatePreview = debounce(this.updatePreview.bind(this), 250);
+    const debouncedGenerateDiagramHash = debounce((code: string) => generateDiagramHash(code), 250);
+    
+    this.editor.onDidChangeModelContent(() => {
+      requestAnimationFrame(() => {
+        debouncedUpdatePreview();
+        debouncedGenerateDiagramHash(this.editor.getValue());
       });
-      
-     
-    }
+    });
+  }
 
+  private setupEventListeners(): void {
     this.setupResizeListeners();
     this.setupInputListeners();
 
@@ -185,7 +186,7 @@ class MermaidEditor {
     const saveSettingsBtn = document.querySelector<HTMLButtonElement>("#save-settings")!;
     const apiTokenInput = document.querySelector<HTMLInputElement>("#api-token")!;
 
-    apiTokenInput.value = localStorage.getItem("anthropicApiKey") || "";
+    apiTokenInput.value = localStorage.getItem("googleAiApiKey") || "";
 
     settingsBtn.addEventListener("click", () => {
       settingsDialog.classList.toggle("hidden");
@@ -196,7 +197,7 @@ class MermaidEditor {
 
     saveSettingsBtn.addEventListener("click", () => {
       const apiToken = apiTokenInput.value.trim();
-      localStorage.setItem("anthropicApiKey", apiToken);
+      localStorage.setItem("googleAiApiKey", apiToken);
       settingsDialog.classList.add("hidden");
       
       // Show visual feedback 

@@ -8,14 +8,10 @@ export const EDITOR_CONFIG: EditorConfig = {
 };
 
 export const AI_CONFIG: AIConfig = {
-  apiKey: localStorage.getItem('anthropicApiKey') || import.meta.env.VITE_ANTHROPIC_API_KEY,
-  model: 'claude-3-7-sonnet-20250219',
-  temperature:1,
+  apiKey: localStorage.getItem('googleAiApiKey') || import.meta.env.VITE_GOOGLE_AI_API_KEY,
+  model: 'gemini-2.5-pro-preview-06-05',
+  temperature: 1,
   maxTokens: 64000,
-  thinking: {
-    type: "enabled",
-    budgetTokens: 15139
-  }
 };
 
 export const MERMAID_CONFIG = {

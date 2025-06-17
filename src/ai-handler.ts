@@ -34,7 +34,9 @@ export class AIHandler {
       this.setLoadingState(true);
       const currentCode = this.editor.getValue();
 
-      const systemPrompt = "You are a helpful assistant that can help me go create or edit the Mermaid diagram code. ALWAYS wrap the code in ```mermaid tags. Think step by step before responding.";
+      const systemPrompt = `You are a thoughtful assistant that helps create or edit Mermaid diagram code.
+ALWAYS wrap any code output in \`\`\`mermaid\`\`\` tags.
+Use chain-of-thought reasoning, thinking carefully step by step before responding.`;
       
       let contents = [
         createUserContent([

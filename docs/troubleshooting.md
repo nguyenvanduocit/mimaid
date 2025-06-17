@@ -49,10 +49,9 @@ curl -H "Content-Type: application/json" \
 **Solutions:**
 1. **Improve Prompt Context**
 ```typescript
-const systemPrompt = `You are a helpful assistant that creates valid Mermaid diagram code. 
-ALWAYS wrap the code in \`\`\`mermaid tags. 
-Ensure the syntax is valid and follows Mermaid specifications.
-Think step by step before responding.`;
+const systemPrompt = `You are a thoughtful assistant that helps create or edit Mermaid diagram code.
+ALWAYS wrap any code output in \`\`\`mermaid\`\`\` tags.
+Use chain-of-thought reasoning, thinking carefully step by step before responding.`;
 ```
 
 2. **Add Validation**

@@ -42,6 +42,7 @@ class MermaidEditor {
   private monaco: any = null;
   private errorDecorations: string[] = [];
   private pendingError: { message: string; code: string } | null = null;
+  private presetEventListenersSetup: boolean = false;
 
   constructor() {
     this.initializeApplication();
@@ -1145,7 +1146,10 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
 
   private setupPresets(): void {
     this.populatePresetGrid();
-    this.setupPresetEventListeners();
+    if (!this.presetEventListenersSetup) {
+      this.setupPresetEventListeners();
+      this.presetEventListenersSetup = true;
+    }
   }
 
   private hasEditorContent(): boolean {

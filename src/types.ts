@@ -52,4 +52,12 @@ export interface GroundingMetadata {
 export interface Preset {
   title: string;
   prompt: string;
+}
+
+export interface MermaidError {
+  message: string;
+  line?: number;
+  column?: number;
+  severity: 'error' | 'warning' | 'info';
+  source?: string;
 } 

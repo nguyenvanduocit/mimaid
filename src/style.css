@@ -1,3 +1,7 @@
+/* ==========================================================================
+   Base Layout
+   ========================================================================== */
+
 body {
     overflow: hidden;
     overscroll-behavior: none;
@@ -11,34 +15,40 @@ body {
     contain: layout size;
 }
 
+/* Editor Pane */
 .editor-pane {
     flex: 0 0 25%;
     min-width: 0;
     display: flex;
     flex-direction: column;
     contain: layout style;
-        will-change: flex-basis;
+    will-change: flex-basis;
 }
 
+/* Preview Pane */
 .preview-pane {
     flex: 1;
     min-width: 0;
     overflow: hidden;
+    position: relative;
     contain: layout style;
-        content-visibility: auto;
+    content-visibility: auto;
 }
+
+/* ==========================================================================
+   Preview and Editor Components
+   ========================================================================== */
 
 #mermaid-preview {
     display: inline-block;
-    
     width: 100%;
-        height: 100%;
-    }
-    
-    #mermaid-preview svg {
-        width: 100%;
-        height: 100%;
-        max-width: 100% !important;
+    height: 100%;
+}
+
+#mermaid-preview svg {
+    width: 100%;
+    height: 100%;
+    max-width: 100% !important;
 }
 
 .editor {
@@ -50,6 +60,7 @@ body {
     font-family: monospace;
 }
 
+/* Resize Handle */
 .resize-handle {
     width: 4px;
     background-color: #ccc;
@@ -60,13 +71,34 @@ body {
 .resize-handle:hover {
     background-color: #999;
 }
+/* ==========================================================================
+   Error Display
+   ========================================================================== */
+
 .error-overlay {
-    color: red;
-    font-size: 0.8rem;
-    padding: 1rem;
-    width: 100%;
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: #ff4444;
+    font-size: 0.9rem;
+    padding: 2rem;
     white-space: pre-wrap;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 10;
+    border-radius: 4px;
+    backdrop-filter: blur(2px);
+    margin: 0;
 }
+
+/* ==========================================================================
+   Controls and Buttons
+   ========================================================================== */
 
 .floating-controls {
     position: fixed;
@@ -91,24 +123,27 @@ body {
     transform: translate3d(0, 0, 0);
     transition: background-color 0.2s;
     aspect-ratio: 1 / 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: calc(1em + 10px);
-        /* Base minimum width on the height (font size + padding) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: calc(1em + 10px);
 }
 
-/* Ensure zoom buttons are perfect squares */
+.button:hover {
+    background: #f0f0f0;
+}
+
+/* Zoom Buttons */
 .zoom-button {
     width: 28px;
     height: 28px;
     padding: 0;
     font-size: 1rem;
 }
+/* ==========================================================================
+   Collaboration Styles
+   ========================================================================== */
 
-.button:hover {
-    background: #f0f0f0;
-}
 .yRemoteSelection {
     background-color: rgb(250, 129, 0, .5)
 }
@@ -130,8 +165,11 @@ body {
     left: -4px;
     top: -5px;
 }
-@media screen and (max-width: 768px) {
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
 
+@media screen and (max-width: 768px) {
     .editor-pane,
     .resize-handle,
     .resize-handle-horizontal,
@@ -143,6 +181,10 @@ body {
         flex: 1 1 100%;
     }
 }
+
+/* ==========================================================================
+   Input Area and AI Controls
+   ========================================================================== */
 
 .input-area {
     flex-grow: 1;
@@ -166,6 +208,7 @@ body {
     border-radius: 4px;
 }
 
+/* Preset Button */
 .preset-button {
     display: flex;
     align-items: center;
@@ -192,6 +235,7 @@ body {
     transform: scale(0.95);
 }
 
+/* Preset Card */
 .preset-card {
     position: absolute;
     top: calc(100% + 8px);
@@ -267,6 +311,10 @@ body {
     line-height: 1.4;
 }
 
+/* ==========================================================================
+   Status Bar
+   ========================================================================== */
+
 .status-bar {
     position: relative;
     display: flex;
@@ -279,6 +327,38 @@ body {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
+.status-text {
+    margin-left: 10px;
+    color: #ffffff;
+    font-size: 12px;
+    flex-grow: 1;
+}
+
+#settings-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    transition: background-color 0.2s;
+}
+
+#settings-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#settings-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* ==========================================================================
+   Settings Dialog
+   ========================================================================== */
+
 .settings-dialog {
     position: absolute;
     top: 100%;
@@ -286,68 +366,68 @@ body {
     right: 0;
     background: #fff;
     border: 1px solid #e0e0e0;
-        border-radius: 12px;
-        padding: 2rem;
+    border-radius: 12px;
+    padding: 2rem;
     z-index: 1000;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-        transform: translateY(0);
+    transform: translateY(0);
     transition: transform 0.3s ease, opacity 0.3s ease;
-        max-width: 400px;
-        margin-top: 8px;
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+    max-width: 400px;
+    margin-top: 8px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
 .settings-dialog.hidden {
     display: none;
     transform: translateY(-10px);
-        opacity: 0;
+    opacity: 0;
 }
 
 .settings-content {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    }
-    
+}
+
 .form-group {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    }
-    
+}
+
 .form-hint {
     color: #6b7280;
-        font-size: 12px;
-        margin-top: 0.25rem;
+    font-size: 12px;
+    margin-top: 0.25rem;
     line-height: 1.4;
 }
-    
+
 .settings-content label {
     font-weight: 600;
-        margin-bottom: 0.5rem;
-        color: #374151;
-        font-size: 14px;
+    margin-bottom: 0.5rem;
+    color: #374151;
+    font-size: 14px;
     letter-spacing: 0.025em;
 }
 
 .settings-content input {
     padding: 0.875rem 1rem;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        background: #ffffff;
-        color: #374151;
-        font-size: 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 14px;
     font-weight: 400;
-        transition: all 0.2s ease;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    }
-    
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
 .settings-content input:focus {
     border-color: #007acc;
     outline: none;
     box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.1), 0 1px 2px rgba(0, 0, 0, 0.05);
-        background: #ffffff;
+    background: #ffffff;
 }
 
 .settings-content input:hover {
@@ -357,96 +437,72 @@ body {
 .save-button {
     margin-top: 0.75rem;
     width: 100%;
-        padding: 0.75rem 1.5rem;
-        background-color: #007acc;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
+    padding: 0.75rem 1.5rem;
+    background-color: #007acc;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
     transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0, 122, 204, 0.2);
-    }
-    
+    box-shadow: 0 2px 4px rgba(0, 122, 204, 0.2);
+}
+
 .save-button:hover {
     background-color: #0069b0;
     box-shadow: 0 3px 6px rgba(0, 122, 204, 0.3);
-        transform: translateY(-1px);
+    transform: translateY(-1px);
+}
+
+.save-button:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 122, 204, 0.2);
+}
+        
+/* Settings Saved Message */
+.settings-saved-message {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #4caf50;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 10000;
+    animation: slide-in 0.3s ease-out forwards;
+    opacity: 1;
+}
+
+.settings-saved-message.fade-out {
+    animation: fade-out 0.5s ease-out forwards;
+}
+
+@keyframes slide-in {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
     }
-    
-    .save-button:active {
+    to {
         transform: translateY(0);
-        box-shadow: 0 1px 2px rgba(0, 122, 204, 0.2);
-}
-.status-text {
-    margin-left: 10px;
-    color: #ffffff;
-    font-size: 12px;
-    flex-grow: 1;
+        opacity: 1;
     }
-    
-    #settings-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 6px;
-            background: transparent;
-            border: none;
-            border-radius: 4px;
-            color: white;
-            transition: background-color 0.2s;
-        }
-        
-        #settings-btn:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-    }
-    
-    #settings-btn svg {
-        width: 18px;
-            height: 18px;
-        }
-        
-        .settings-saved-message {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #4caf50;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 6px;
-            font-size: 14px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-            z-index: 10000;
-            animation: slide-in 0.3s ease-out forwards;
-            opacity: 1;
-        }
-        
-        .settings-saved-message.fade-out {
-            animation: fade-out 0.5s ease-out forwards;
-        }
-        
-        @keyframes slide-in {
-            from {
-                transform: translateY(20px);
-                opacity: 0;
-            }
-        
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-        
-        @keyframes fade-out {
-            from {
-                opacity: 1;
-            }
-        
-            to {
-                opacity: 0;
-            }
 }
+
+@keyframes fade-out {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+/* ==========================================================================
+   Warning and AI Fix Components
+   ========================================================================== */
+
 .api-key-warning {
     display: flex;
     align-items: center;
@@ -478,6 +534,7 @@ body {
     color: #721c24;
 }
 
+/* Fix with AI Button */
 .fix-with-ai-button {
     display: flex;
     align-items: center;
@@ -512,4 +569,62 @@ body {
     flex-shrink: 0;
     width: 16px;
     height: 16px;
+}
+
+/* ==========================================================================
+   Monaco Editor Error Styling
+   ========================================================================== */
+
+.mermaid-error-line {
+    background-color: rgba(255, 0, 0, 0.1) !important;
+    border-left: 3px solid #ff0000 !important;
+}
+
+.mermaid-error-glyph {
+    background-color: #ff0000 !important;
+    width: 3px !important;
+    border-radius: 1px;
+}
+
+/* Monaco Error Marker Hover */
+.monaco-editor .hover-row .mermaid-error-line {
+    background-color: rgba(255, 0, 0, 0.15) !important;
+}
+
+/* Monaco Editor Scrollable Element Error Styling */
+.monaco-editor .lines-content .view-lines .view-line .mermaid-error-line {
+    position: relative;
+}
+
+/* Error squiggly underlines for specific positions */
+.monaco-editor .squiggly-error-mermaid {
+    background: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 3' enable-background='new 0 0 6 3' height='3' width='6'%3E%3Cg fill='%23ff0000'%3E%3Cpolygon points='5.5,0 2.5,3 1.1,3 4.1,0'/%3E%3Cpolygon points='4,0 6,2 6,0.6 5.4,0'/%3E%3Cpolygon points='0,2 1,3 2.4,3 0,0.6'/%3E%3C/g%3E%3C/svg%3E") repeat-x bottom left;
+}
+
+/* Error tooltip styling */
+.monaco-editor .monaco-hover .mermaid-error-hover {
+    border-left: 3px solid #ff0000;
+    padding-left: 8px;
+    background-color: #ffebee;
+    color: #d32f2f;
+    font-weight: 500;
+}
+
+/* Quick fix lightbulb styling */
+.monaco-editor .lightbulb-glyph {
+    background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTkuNSAyLjVDOS41IDEuOTQ3NzIgOS4wNTIyOCAxLjUgOC41IDEuNUM3Ljk0NzcyIDEuNSA3LjUgMS45NDc3MiA3LjUgMi41VjNDNy41IDMuNTUyMjggNy45NDc3MiA0IDguNSA0QzkuMDUyMjggNCA5LjUgMy41NTIyOCA5LjUgM1YyLjVaIiBmaWxsPSIjRkZCRjAwIi8+CjxwYXRoIGQ9Ik0xMy41IDcuNUMxNC4wNTIzIDcuNSAxNC41IDcuMDUyMjggMTQuNSA2LjVDMTQuNSA1Ljk0NzcyIDE0LjA1MjMgNS41IDEzLjUgNS41SDEzQzEyLjQ0NzcgNS41IDEyIDUuOTQ3NzIgMTIgNi41QzEyIDcuMDUyMjggMTIuNDQ3NyA3LjUgMTMgNy41SDEzLjVaIiBmaWxsPSIjRkZCRjAwIi8+CjxwYXRoIGQ9Ik0zLjUgNi41QzMuNSA3LjA1MjI4IDMuOTQ3NzIgNy41IDQuNSA3LjVINUM1LjU1MjI4IDcuNSA2IDcuMDUyMjggNiA2LjVDNiA1Ljk0NzcyIDUuNTUyMjggNS41IDUgNS41SDQuNUMzLjk0NzcyIDUuNSAzLjUgNS45NDc3MiAzLjUgNi41WiIgZmlsbD0iI0ZGQkYwMCIvPgo8cGF0aCBkPSJNNS41IDEwLjVDNS41IDkuMzk1NDMgNi4zOTU0MyA4LjUgNy41IDguNUg5LjVDMTAuNjA0NiA4LjUgMTEuNSA5LjM5NTQzIDExLjUgMTAuNVYxMi41QzExLjUgMTMuMDUyMyAxMS4wNTIzIDEzLjUgMTAuNSAxMy41SDYuNUM1Ljk0NzcyIDEzLjUgNS41IDEzLjA1MjMgNS41IDEyLjVWMTAuNVoiIGZpbGw9IiNGRkJGMDAiLz4KPHBhdGggZD0iTTcuNSAxM0g5LjVWMTRDOS41IDE0LjU1MjMgOS4wNTIyOCAxNSA4LjUgMTVDNy45NDc3MiAxNSA3LjUgMTQuNTUyMyA3LjUgMTRWMTNaIiBmaWxsPSIjRkZCRjAwIi8+Cjwvc3ZnPg==') no-repeat;
+}
+
+/* Code action widget styling */
+.monaco-editor .monaco-action-bar .action-item .action-label.codicon-lightbulb {
+    color: #ffbf00 !important;
+}
+
+/* Quick fix menu styling */
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused {
+    background-color: #e3f2fd !important;
+}
+
+.monaco-editor .suggest-widget .monaco-list .monaco-list-row .suggest-icon.codicon-lightbulb {
+    color: #ffbf00 !important;
 }

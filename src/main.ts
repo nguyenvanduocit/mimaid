@@ -6,11 +6,14 @@ import { EditorState, EditorElements } from "./types";
 import { EDITOR_CONFIG, MONACO_CONFIG, MERMAID_CONFIG, CREATION_PRESETS, MODIFICATION_PRESETS, AI_CONFIG } from "./config";
 import { AIHandler } from "./ai-handler";
 import { CollaborationHandler } from "./collaboration";
-import { debounce, loadDiagramFromURL, generateDiagramHash, getStoredEditorWidth, setStoredEditorWidth } from "./utils";
+import { debounce, loadDiagramFromURL, generateDiagramHash, getStoredEditorWidth, setStoredEditorWidth, parseMermaidError } from "./utils";
 import { EventHelpers } from "./events";
 
-// Lazy load Monaco editor
 let monacoInstance: any | null = null;
+
+/**
+ * Lazy loads Monaco editor and configures Mermaid language support
+ */
 async function loadMonaco() {
   if (!monacoInstance) {
     const monaco = await import("monaco-editor");
@@ -25,23 +28,29 @@ async function loadMonaco() {
   return monacoInstance;
 }
 
-// State management
 const state: EditorState = {
   isResizing: false,
 };
 
 class MermaidEditor {
-  private editor!: any; // Change type to any since we're dynamically importing
+  private editor!: any;
   private elements!: EditorElements;
   private aiHandler!: AIHandler;
   private collaborationHandler!: CollaborationHandler;
   private panZoomInstance: any;
   private currentError: string | null = null;
-  private autoFixRetryCount: number = 0;
-  private readonly MAX_AUTO_FIX_ATTEMPTS = 3;
-  private isAutoFixing: boolean = false;
+  private monaco: any = null;
+  private errorDecorations: string[] = [];
+  private pendingError: { message: string; code: string } | null = null;
 
   constructor() {
+    this.initializeApplication();
+  }
+
+  /**
+   * Initialize the complete application
+   */
+  private initializeApplication(): void {
     this.initializeDOM();
     this.initializeMermaid();
     this.setupEventListeners();
@@ -50,7 +59,6 @@ class MermaidEditor {
     this.updateInputAreaVisibility();
     this.setupPresets();
     
-    // Emit app ready event
     EventHelpers.safeEmit('app:ready', {});
   }
 
@@ -103,8 +111,8 @@ class MermaidEditor {
     
     if (!editorElement) return;
 
-    const monaco = await loadMonaco();
-    this.editor = monaco.editor.create(editorElement, {
+    this.monaco = await loadMonaco();
+    this.editor = this.monaco.editor.create(editorElement, {
       value: code,
       ...MONACO_CONFIG
     });
@@ -120,6 +128,16 @@ class MermaidEditor {
     this.setupEditorEventListeners();
 
     this.setupHandlers();
+    
+    // Process any pending error now that editor is ready
+    if (this.pendingError) {
+      console.log('[DEBUG] Processing pending error after editor ready');
+      this.setErrorMarkers(this.pendingError.message, this.pendingError.code);
+      this.pendingError = null;
+    }
+    
+    // Register code action provider for AI fixes
+    this.registerAICodeActionProvider();
     
     // Emit editor ready event
     EventHelpers.safeEmit('editor:ready', { editor: this.editor });
@@ -143,7 +161,7 @@ class MermaidEditor {
     if (window.location.search.includes('room')) {
       const { CollaborationHandler } = await import('./collaboration');
       this.collaborationHandler = new CollaborationHandler(this.editor);
-      await this.collaborationHandler.setup();
+      this.collaborationHandler.setup();
     }
   }
 
@@ -156,6 +174,9 @@ class MermaidEditor {
     }
   }
 
+  /**
+   * Setup Monaco editor event listeners for content changes
+   */
   private setupEditorEventListeners(): void {
     const debouncedEmitChange = debounce((code: string) => {
       EventHelpers.safeEmit('editor:change', { code });
@@ -341,75 +362,131 @@ class MermaidEditor {
     this.elements.editorPane.style.flexBasis = `${clampedWidth}%`;
   };
 
+  /**
+   * Render Mermaid diagram with error handling and UI updates
+   */
   private async renderMermaidDiagram(code: string): Promise<void> {
     try {
-      this.elements.mermaidPreview.innerHTML = "";
+      this.clearPreview();
 
-      if (!(await mermaid.parse(code))) {
-        throw new Error("Invalid diagram syntax");
-      }
-
-      // Create a temporary div for rendering
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.visibility = 'hidden';
-      document.body.appendChild(tempDiv);
-      
-      const result = await mermaid.render("mermaid-diagram", code, tempDiv);
-      
-      // Use requestAnimationFrame for DOM updates
-      requestAnimationFrame(() => {
-        this.elements.mermaidPreview.innerHTML = result.svg;
+      if (this.isEmptyCode(code)) {
         this.hideError();
-
-        const svg = this.elements.mermaidPreview.querySelector("svg");
-        if (svg) {
-          if (this.panZoomInstance) {
-            this.panZoomInstance.destroy();
-          }
-          this.panZoomInstance = svgPanZoom(svg, {
-            panEnabled: true,
-            zoomEnabled: true,
-            controlIconsEnabled: false,
-            fit: true,
-            center: true,
-          });
-        }
-        
-        // Emit diagram rendered event
-        EventHelpers.safeEmit('diagram:rendered', { svg: result.svg });
-        
-        // Clean up
-        document.body.removeChild(tempDiv);
-      });
-    } catch (error) {
-      console.error("Failed to render diagram:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to render diagram";
-      this.currentError = errorMessage;
-      
-      // Emit diagram error event
-      EventHelpers.safeEmit('diagram:error', { error: errorMessage });
-      EventHelpers.safeEmit('editor:error', { error: errorMessage });
-      
-      this.showError(errorMessage);
-      
-      // Automatically attempt to fix the error if we haven't exceeded max attempts and aren't already auto-fixing
-      if (this.autoFixRetryCount < this.MAX_AUTO_FIX_ATTEMPTS && this.aiHandler && !this.isAutoFixing) {
-        console.log(`Auto-fixing attempt ${this.autoFixRetryCount + 1}/${this.MAX_AUTO_FIX_ATTEMPTS}`);
-        this.autoFixRetryCount++;
-        this.isAutoFixing = true;
-        await this.handleAutoFixWithAI();
-      } else {
-        // Reset retry count for future manual fixes if we've exceeded attempts
-        if (this.autoFixRetryCount >= this.MAX_AUTO_FIX_ATTEMPTS) {
-          this.autoFixRetryCount = 0;
-        }
-        this.showFixWithAIOption();
+        return;
       }
+
+      await this.validateAndRenderDiagram(code);
+    } catch (error) {
+      this.handleRenderError(error, code);
     }
   }
 
+  /**
+   * Clear the diagram preview
+   */
+  private clearPreview(): void {
+    this.elements.mermaidPreview.innerHTML = "";
+  }
 
+  /**
+   * Check if code is empty or only whitespace
+   */
+  private isEmptyCode(code: string): boolean {
+    return !code || code.trim().length === 0;
+  }
+
+  /**
+   * Validate and render the Mermaid diagram
+   */
+  private async validateAndRenderDiagram(code: string): Promise<void> {
+    if (!(await mermaid.parse(code))) {
+      throw new Error("Invalid diagram syntax");
+    }
+
+    const tempDiv = this.createTempRenderDiv();
+    const result = await mermaid.render("mermaid-diagram", code, tempDiv);
+    
+    requestAnimationFrame(() => {
+      this.updatePreviewWithSVG(result.svg);
+      this.setupPanZoom();
+      EventHelpers.safeEmit('diagram:rendered', { svg: result.svg });
+      document.body.removeChild(tempDiv);
+    });
+  }
+
+  /**
+   * Create temporary div for Mermaid rendering
+   */
+  private createTempRenderDiv(): HTMLDivElement {
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.visibility = 'hidden';
+    document.body.appendChild(tempDiv);
+    return tempDiv;
+  }
+
+  /**
+   * Update preview with rendered SVG
+   */
+  private updatePreviewWithSVG(svg: string): void {
+    this.elements.mermaidPreview.innerHTML = svg;
+    this.hideError();
+  }
+
+  /**
+   * Setup pan and zoom functionality for the SVG
+   */
+  private setupPanZoom(): void {
+    const svg = this.elements.mermaidPreview.querySelector("svg");
+    if (svg) {
+      if (this.panZoomInstance) {
+        this.panZoomInstance.destroy();
+      }
+      this.panZoomInstance = svgPanZoom(svg, {
+        panEnabled: true,
+        zoomEnabled: true,
+        controlIconsEnabled: false,
+        fit: true,
+        center: true,
+      });
+    }
+  }
+
+  /**
+   * Handle diagram rendering errors
+   */
+  private handleRenderError(error: unknown, code: string): void {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    this.currentError = errorMessage;
+    
+    this.processErrorMarkers(errorMessage, code);
+    this.emitErrorEvents(errorMessage);
+    this.showError(errorMessage);
+    this.showFixWithAIOption();
+  }
+
+  /**
+   * Process error markers for Monaco editor
+   */
+  private processErrorMarkers(errorMessage: string, code: string): void {
+    if (this.editor && (this.monaco || monacoInstance)) {
+      this.setErrorMarkers(errorMessage, code);
+    } else {
+      this.pendingError = { message: errorMessage, code: code };
+    }
+  }
+
+  /**
+   * Emit error events
+   */
+  private emitErrorEvents(errorMessage: string): void {
+    EventHelpers.safeEmit('diagram:error', { error: errorMessage });
+    EventHelpers.safeEmit('editor:error', { error: errorMessage });
+  }
+
+
+  /**
+   * Render diagram (wrapper method for renderMermaidDiagram)
+   */
   private async renderDiagram(code: string): Promise<void> {
     await this.renderMermaidDiagram(code);
   }
@@ -429,8 +506,9 @@ class MermaidEditor {
   private hideError(): void {
     this.elements.errorOverlay.style.display = "none";
     this.currentError = null;
-    this.autoFixRetryCount = 0; // Reset retry count when error is cleared
-    this.isAutoFixing = false; // Reset auto-fixing flag
+    
+    // Clear Monaco error markers
+    this.clearErrorMarkers();
     
     // Hide error-specific elements
     const fixButton = document.querySelector<HTMLButtonElement>("#fix-with-ai-btn");
@@ -440,6 +518,257 @@ class MermaidEditor {
     
     // Restore normal input area when error is cleared
     this.updateInputAreaVisibility();
+  }
+
+  /**
+   * Set error markers in Monaco Editor
+   */
+  private setErrorMarkers(error: string, code: string): void {
+    if (!this.ensureMonacoAvailable()) return;
+
+    const model = this.editor.getModel();
+    if (!model) return;
+
+    const parsedError = parseMermaidError(error, code);
+    const markers = this.createErrorMarkers(parsedError, code);
+    this.applyErrorDecorations(parsedError, code);
+    
+    if (markers.length > 0) {
+      this.monaco.editor.setModelMarkers(model, 'mermaid', markers);
+    }
+  }
+
+  /**
+   * Ensure Monaco is available for error marking
+   */
+  private ensureMonacoAvailable(): boolean {
+    if (!this.monaco && monacoInstance) {
+      this.monaco = monacoInstance;
+    }
+    
+    return !!(this.monaco && this.editor);
+  }
+
+  /**
+   * Create error markers for Monaco editor
+   */
+  private createErrorMarkers(parsedError: any, code: string): any[] {
+    const markers = [];
+
+    if (parsedError.line) {
+      const marker = this.createLineMarker(parsedError, code);
+      markers.push(marker);
+    } else {
+      const fallbackMarker = this.createFallbackMarker(parsedError, code);
+      if (fallbackMarker) markers.push(fallbackMarker);
+    }
+
+    return markers;
+  }
+
+  /**
+   * Create marker for specific line
+   */
+  private createLineMarker(parsedError: any, code: string): any {
+    const startColumn = parsedError.column || 1;
+    const lines = code.split('\n');
+    const lineContent = lines[parsedError.line - 1] || '';
+    const endColumn = parsedError.column ? parsedError.column + 1 : lineContent.length + 1;
+    
+    return {
+      startLineNumber: parsedError.line,
+      endLineNumber: parsedError.line,
+      startColumn: startColumn,
+      endColumn: endColumn,
+      message: parsedError.message,
+      severity: this.monaco.MarkerSeverity.Error
+    };
+  }
+
+  /**
+   * Create fallback marker for first non-empty line
+   */
+  private createFallbackMarker(parsedError: any, code: string): any | null {
+    const lines = code.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line && !line.startsWith('%%') && !line.startsWith('#')) {
+        return {
+          startLineNumber: i + 1,
+          endLineNumber: i + 1,
+          startColumn: 1,
+          endColumn: lines[i].length + 1,
+          message: parsedError.message,
+          severity: this.monaco.MarkerSeverity.Error
+        };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Apply error decorations to editor lines
+   */
+  private applyErrorDecorations(parsedError: any, code: string): void {
+    const lines = code.split('\n');
+    let lineNumber = parsedError.line;
+    
+    if (!lineNumber) {
+      lineNumber = this.findFirstContentLine(lines);
+    }
+    
+    if (lineNumber) {
+      const lineContent = lines[lineNumber - 1] || '';
+      const decorationRange = new this.monaco.Range(lineNumber, 1, lineNumber, lineContent.length + 1);
+      
+      this.errorDecorations = this.editor.deltaDecorations(this.errorDecorations, [{
+        range: decorationRange,
+        options: {
+          isWholeLine: true,
+          className: 'mermaid-error-line',
+          glyphMarginClassName: 'mermaid-error-glyph',
+          linesDecorationsClassName: 'mermaid-error-line-number'
+        }
+      }]);
+    }
+  }
+
+  /**
+   * Find first non-empty, non-comment line
+   */
+  private findFirstContentLine(lines: string[]): number | null {
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line && !line.startsWith('%%') && !line.startsWith('#')) {
+        return i + 1;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Clear all error markers from Monaco Editor
+   */
+  private clearErrorMarkers(): void {
+    if (!this.ensureMonacoAvailable()) return;
+    
+    const model = this.editor.getModel();
+    if (!model) return;
+    
+    this.monaco.editor.setModelMarkers(model, 'mermaid', []);
+    this.errorDecorations = this.editor.deltaDecorations(this.errorDecorations, []);
+  }
+
+  /**
+   * Register Monaco code action provider for AI-powered quick fixes
+   */
+  private registerAICodeActionProvider(): void {
+    if (!this.monaco || !this.editor) {
+      console.log('[DEBUG] Cannot register AI code action provider - monaco or editor not available', {
+        monaco: !!this.monaco,
+        editor: !!this.editor
+      });
+      return;
+    }
+
+    console.log('[DEBUG] Registering AI code action provider', {
+      monaco: !!this.monaco,
+      editor: !!this.editor,
+      monacoVersion: this.monaco.editor.VERSION || 'unknown'
+    });
+
+    const actionProvider = {
+      provideCodeActions: (model: any, range: any, context: any) => {
+        console.log('[DEBUG] provideCodeActions called', { range, context });
+        
+        // Check if there are any markers (errors) in the current range
+        const markers = this.monaco.editor.getModelMarkers({ 
+          resource: model.uri 
+        });
+        
+        const markersInRange = markers.filter((marker: any) => {
+          return marker.startLineNumber >= range.startLineNumber &&
+                 marker.endLineNumber <= range.endLineNumber;
+        });
+
+        console.log('[DEBUG] Markers in range:', markersInRange);
+
+        if (markersInRange.length === 0) {
+          return { actions: [], dispose: () => {} };
+        }
+
+        const actions = markersInRange.map((marker: any) => ({
+          title: '🤖 Fix with AI',
+          kind: 'quickfix',
+          diagnostics: [marker],
+          isPreferred: true,
+          command: {
+            id: 'mermaid.fixWithAI',
+            title: 'Fix with AI'
+          }
+        }));
+
+        return {
+          actions: actions,
+          dispose: () => {}
+        };
+      }
+    };
+
+    // Register the code action provider
+    const disposable1 = this.monaco.languages.registerCodeActionProvider('mermaid', actionProvider);
+    console.log('[DEBUG] Code action provider registered:', !!disposable1);
+
+    // Register the command that will be executed when the action is clicked
+    const disposable2 = this.editor.addCommand(
+      this.monaco.KeyMod.CtrlCmd | this.monaco.KeyCode.Period, // Ctrl/Cmd + .
+      () => {
+        console.log('[DEBUG] Quick fix shortcut triggered');
+        this.editor.trigger('', 'editor.action.quickFix', null);
+      }
+    );
+    console.log('[DEBUG] Quick fix shortcut registered:', !!disposable2);
+
+    // Register the fix command - just emit an event to trigger existing AI fix logic
+    const commandId = 'mermaid.fixWithAI';
+    
+    try {
+      // Register the command with Monaco's command service
+      this.monaco.editor.registerCommand(commandId, () => {
+        console.log('[DEBUG] Fix with AI command triggered');
+        
+        // Just emit an event to trigger the existing AI fix logic
+        EventHelpers.safeEmit('ui:fixWithAI', {});
+        
+        // Call the existing handleFixWithAI method
+        this.handleFixWithAI();
+      });
+      console.log('[DEBUG] Monaco command registered:', commandId);
+      
+      // Also add it as an editor action for context menu and keybindings
+      const actionDisposable = this.editor.addAction({
+        id: commandId,
+        label: 'Fix Mermaid Error with AI',
+        keybindings: [
+          this.monaco.KeyMod.CtrlCmd | this.monaco.KeyMod.Shift | this.monaco.KeyCode.KeyF
+        ],
+        contextMenuGroupId: 'navigation',
+        contextMenuOrder: 1.5,
+        run: () => {
+          console.log('[DEBUG] Fix with AI action triggered');
+          
+          // Just emit an event to trigger the existing AI fix logic
+          EventHelpers.safeEmit('ui:fixWithAI', {});
+          
+          // Call the existing handleFixWithAI method
+          this.handleFixWithAI();
+        }
+      });
+      console.log('[DEBUG] Editor action registered:', commandId, !!actionDisposable);
+      
+    } catch (error) {
+      console.error('[DEBUG] Error registering AI fix command:', error);
+    }
   }
 
   private exportToSvg(): void {
@@ -625,171 +954,193 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     await this.aiHandler.handleSubmit();
   }
 
-  private async handleAutoFixWithAI(): Promise<void> {
-    if (!this.aiHandler || !this.currentError) return;
 
-    const currentCode = this.editor.getValue();
-    const errorMessage = this.currentError;
-    
-    // Update status to show auto-fixing
-    this.elements.generationStatus.style.display = "block";
-    this.elements.generationStatus.textContent = `🔧 Auto-fixing attempt ${this.autoFixRetryCount}/${this.MAX_AUTO_FIX_ATTEMPTS}...`;
-    
-    // Create a fix prompt with the current code and error
-    const fixPrompt = `Please fix the following Mermaid diagram code that has an error:
-
-Error: ${errorMessage}
-
-Current code:
-\`\`\`mermaid
-${currentCode}
-\`\`\`
-
-Please provide the corrected Mermaid diagram code that fixes this error while preserving the intent of the original diagram.`;
-
-    try {
-      // Call the AI handler's submit logic directly without modifying the UI
-      await this.submitAutoFixRequest(fixPrompt);
-    } catch (error) {
-      console.error("Auto-fix failed:", error);
-      // If auto-fix fails, show the manual fix option
-      this.autoFixRetryCount = 0;
-      this.isAutoFixing = false;
-      this.showFixWithAIOption();
-      this.elements.generationStatus.style.display = "none";
-    } finally {
-      // Always reset the auto-fixing flag when done
-      this.isAutoFixing = false;
-    }
-  }
-
-  private async submitAutoFixRequest(prompt: string): Promise<void> {
-    if (!this.aiHandler) return;
-
-    // Create a temporary AI handler instance for auto-fixing
-    const tempInputField = document.createElement('input');
-    tempInputField.type = 'text';
-    tempInputField.value = prompt;
-    tempInputField.style.display = 'none';
-    document.body.appendChild(tempInputField);
-
-    const tempInputArea = document.createElement('div');
-    tempInputArea.style.display = 'none';
-    document.body.appendChild(tempInputArea);
-
-    try {
-      // Create a temporary AI handler for this auto-fix request
-      const autoFixAIHandler = new AIHandler(this.editor, {
-        inputField: tempInputField,
-        inputArea: tempInputArea,
-        generationStatus: this.elements.generationStatus
-      });
-
-      await autoFixAIHandler.handleSubmit();
-    } finally {
-      // Clean up temporary elements
-      document.body.removeChild(tempInputField);
-      document.body.removeChild(tempInputArea);
-    }
-  }
-
+  /**
+   * Update input area visibility based on API key availability
+   */
   private updateInputAreaVisibility(): void {
-    // Don't update input area if there's a current error - let showFixWithAIOption handle it
-    if (this.currentError) {
-      return;
-    }
+    if (this.currentError) return;
 
-    const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
-    const inputField = document.querySelector<HTMLInputElement>("#input-field");
-    const presetButton = document.querySelector<HTMLButtonElement>("#preset-btn");
-    const presetCard = document.querySelector<HTMLDivElement>("#preset-card");
-    const apiKeyWarning = document.querySelector<HTMLDivElement>(".api-key-warning");
+    const elements = this.getInputAreaElements();
     const apiKey = localStorage.getItem("googleAiApiKey") || "";
+    const hasApiKey = apiKey.trim().length > 0;
     
-    if (!apiKey || apiKey.trim().length === 0) {
-      // Hide input field and preset elements, show API key warning
-      if (inputField) inputField.style.display = "none";
-      if (presetButton) presetButton.style.display = "none";
-      if (presetCard) presetCard.classList.add("hidden");
-      
-      // Show or create API key warning
-      if (!apiKeyWarning) {
-        const warningDiv = document.createElement("div");
-        warningDiv.className = "api-key-warning";
-        warningDiv.innerHTML = `
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-            <line x1="12" y1="9" x2="12" y2="13"></line>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
-          <span>Please set up your Google AI API key in settings to use AI features</span>
-        `;
-        inputArea.appendChild(warningDiv);
-      } else {
-        apiKeyWarning.style.display = "flex";
-      }
+    if (hasApiKey) {
+      this.showAIInputElements(elements);
     } else {
-      // Show input field and preset elements, hide API key warning
-      if (apiKeyWarning) apiKeyWarning.style.display = "none";
-      
-      // Create input field and preset elements if they don't exist
-      if (!inputField) {
-        const newInputField = document.createElement("input");
-        newInputField.type = "text";
-        newInputField.id = "input-field";
-        newInputField.placeholder = "Enter your prompt here and press enter...";
-        inputArea.appendChild(newInputField);
-        
-        // Attach event listener to the new input field
-        newInputField.addEventListener("keydown", async (e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            if (this.aiHandler) {
-              await this.aiHandler.handleSubmit();
-            }
-          }
-        });
-      } else {
-        inputField.style.display = "block";
-      }
-      
-      if (!presetButton) {
-        const newPresetButton = document.createElement("button");
-        newPresetButton.id = "preset-btn";
-        newPresetButton.className = "preset-button";
-        newPresetButton.title = "Choose from presets";
-        newPresetButton.innerHTML = `
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <path d="M9 9h6v6H9z"/>
-          </svg>
-        `;
-        inputArea.insertBefore(newPresetButton, inputArea.firstChild);
-      } else {
-        presetButton.style.display = "block";
-      }
-      
-      if (!presetCard) {
-        const newPresetCard = document.createElement("div");
-        newPresetCard.id = "preset-card";
-        newPresetCard.className = "preset-card hidden";
-        newPresetCard.innerHTML = `
-          <div class="preset-header">
-            <h3>Choose a preset</h3>
-          </div>
-          <div class="preset-grid" id="preset-grid">
-            <!-- Preset items will be populated by JavaScript -->
-          </div>
-        `;
-        inputArea.appendChild(newPresetCard);
-      } else {
-        // Always ensure the preset card is hidden initially
-        presetCard.classList.add("hidden");
-      }
-
-      // Re-setup presets after ensuring elements exist
-      this.setupPresets();
+      this.showApiKeyWarning(elements);
     }
+  }
+
+  /**
+   * Get input area DOM elements
+   */
+  private getInputAreaElements() {
+    return {
+      inputArea: document.querySelector<HTMLDivElement>("#input-area")!,
+      inputField: document.querySelector<HTMLInputElement>("#input-field"),
+      presetButton: document.querySelector<HTMLButtonElement>("#preset-btn"),
+      presetCard: document.querySelector<HTMLDivElement>("#preset-card"),
+      apiKeyWarning: document.querySelector<HTMLDivElement>(".api-key-warning")
+    };
+  }
+
+  /**
+   * Show AI input elements (input field and presets)
+   */
+  private showAIInputElements(elements: any): void {
+    this.hideApiKeyWarning(elements.apiKeyWarning);
+    this.ensureInputField(elements);
+    this.ensurePresetButton(elements);
+    this.ensurePresetCard(elements);
+    this.setupPresets();
+  }
+
+  /**
+   * Show API key warning and hide other elements
+   */
+  private showApiKeyWarning(elements: any): void {
+    this.hideInputElements(elements);
+    this.createOrShowApiKeyWarning(elements);
+  }
+
+  /**
+   * Hide input field and preset elements
+   */
+  private hideInputElements(elements: any): void {
+    if (elements.inputField) elements.inputField.style.display = "none";
+    if (elements.presetButton) elements.presetButton.style.display = "none";
+    if (elements.presetCard) elements.presetCard.classList.add("hidden");
+  }
+
+  /**
+   * Hide API key warning
+   */
+  private hideApiKeyWarning(apiKeyWarning: HTMLElement | null): void {
+    if (apiKeyWarning) apiKeyWarning.style.display = "none";
+  }
+
+  /**
+   * Create or show API key warning element
+   */
+  private createOrShowApiKeyWarning(elements: any): void {
+    if (!elements.apiKeyWarning) {
+      this.createApiKeyWarning(elements.inputArea);
+    } else {
+      elements.apiKeyWarning.style.display = "flex";
+    }
+  }
+
+  /**
+   * Create API key warning element
+   */
+  private createApiKeyWarning(inputArea: HTMLElement): void {
+    const warningDiv = document.createElement("div");
+    warningDiv.className = "api-key-warning";
+    warningDiv.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+        <line x1="12" y1="9" x2="12" y2="13"></line>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+      <span>Please set up your Google AI API key in settings to use AI features</span>
+    `;
+    inputArea.appendChild(warningDiv);
+  }
+
+  /**
+   * Ensure input field exists and is visible
+   */
+  private ensureInputField(elements: any): void {
+    if (!elements.inputField) {
+      this.createInputField(elements.inputArea);
+    } else {
+      elements.inputField.style.display = "block";
+    }
+  }
+
+  /**
+   * Create input field element
+   */
+  private createInputField(inputArea: HTMLElement): void {
+    const newInputField = document.createElement("input");
+    newInputField.type = "text";
+    newInputField.id = "input-field";
+    newInputField.placeholder = "Enter your prompt here and press enter...";
+    inputArea.appendChild(newInputField);
+    
+    this.attachInputFieldListener(newInputField);
+  }
+
+  /**
+   * Attach event listener to input field
+   */
+  private attachInputFieldListener(inputField: HTMLInputElement): void {
+    inputField.addEventListener("keydown", async (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (this.aiHandler) {
+          await this.aiHandler.handleSubmit();
+        }
+      }
+    });
+  }
+
+  /**
+   * Ensure preset button exists and is visible
+   */
+  private ensurePresetButton(elements: any): void {
+    if (!elements.presetButton) {
+      this.createPresetButton(elements.inputArea);
+    } else {
+      elements.presetButton.style.display = "block";
+    }
+  }
+
+  /**
+   * Create preset button element
+   */
+  private createPresetButton(inputArea: HTMLElement): void {
+    const newPresetButton = document.createElement("button");
+    newPresetButton.id = "preset-btn";
+    newPresetButton.className = "preset-button";
+    newPresetButton.title = "Choose from presets";
+    newPresetButton.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <path d="M9 9h6v6H9z"/>
+      </svg>
+    `;
+    inputArea.insertBefore(newPresetButton, inputArea.firstChild);
+  }
+
+  /**
+   * Ensure preset card exists
+   */
+  private ensurePresetCard(elements: any): void {
+    if (!elements.presetCard) {
+      this.createPresetCard(elements.inputArea);
+    } else {
+      elements.presetCard.classList.add("hidden");
+    }
+  }
+
+  /**
+   * Create preset card element
+   */
+  private createPresetCard(inputArea: HTMLElement): void {
+    const newPresetCard = document.createElement("div");
+    newPresetCard.id = "preset-card";
+    newPresetCard.className = "preset-card hidden";
+    newPresetCard.innerHTML = `
+      <div class="preset-header">
+        <h3>Choose a preset</h3>
+      </div>
+      <div class="preset-grid" id="preset-grid">
+        <!-- Preset items will be populated by JavaScript -->
+      </div>
+    `;
+    inputArea.appendChild(newPresetCard);
   }
 
   private setupPresets(): void {

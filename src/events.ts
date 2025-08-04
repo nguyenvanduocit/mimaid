@@ -28,6 +28,7 @@ export type AppEvents = {
   'ui:settings:save': { apiKey: string };
   'ui:zoom': { direction: 'in' | 'out' };
   'ui:input:submit': { prompt: string };
+  'ui:fixWithAI': {};
   
   // Collaboration events
   'collab:connect': { room: string; name: string };

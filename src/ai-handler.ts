@@ -3,9 +3,12 @@ import { AI_CONFIG } from "./config";
 import { GroundingMetadata } from "./types";
 import { EventHelpers } from "./events";
 
+/**
+ * Handles AI-powered diagram generation using Google Gemini
+ */
 export class AIHandler {
   private client: GoogleGenAI;
-  private editor: any; // Use any since we're dynamically importing Monaco
+  private editor: any;
   private previousPrompt: string;
   private elements: {
     inputField: HTMLTextAreaElement | HTMLInputElement;
@@ -15,7 +18,7 @@ export class AIHandler {
   private groundingMetadata: GroundingMetadata | null = null;
 
   constructor(
-    editor: any, // Use any since we're dynamically importing Monaco
+    editor: any,
     elements: {
       inputField: HTMLTextAreaElement | HTMLInputElement;
       inputArea: HTMLDivElement;
@@ -27,7 +30,6 @@ export class AIHandler {
     this.client = new GoogleGenAI({apiKey: AI_CONFIG.apiKey});
     this.previousPrompt = "";
     
-    // Listen for UI events
     this.setupEventListeners();
   }
 
@@ -59,20 +61,70 @@ Please provide the modified Mermaid diagram code.`;
     });
   }
 
+  /**
+   * Handle AI prompt submission and generation
+   */
   async handleSubmit(): Promise<void> {
-    const { inputField, generationStatus } = this.elements;
-    let prompt = inputField.value.trim();
+    const { inputField } = this.elements;
+    const prompt = inputField.value.trim();
     if (!prompt) return;
 
     try {
-      // Emit AI start event
-      EventHelpers.safeEmit('ai:start', { prompt });
-      EventHelpers.safeEmit('app:loading', { isLoading: true });
-      
-      this.setLoadingState(true);
+      this.startGeneration(prompt);
       const currentCode = this.editor.getValue();
+      const contents = this.buildConversationContents(prompt, currentCode);
+      const parameters = this.buildGenerationParameters(contents);
+      
+      const result = await this.client.models.generateContentStream(parameters);
+      await this.handleStream(result);
+      
+      inputField.value = "";
+      EventHelpers.safeEmit('ai:complete', { code: this.editor.getValue() });
+    } catch (error) {
+      this.handleGenerationError(error);
+    } finally {
+      this.finishGeneration();
+    }
 
-      const systematicPrompt = `You are a Mermaid diagram expert with access to real-time information and web content analysis. Your role is to create, modify, or improve Mermaid diagram code based on user requests.
+    this.previousPrompt = prompt;
+  }
+
+  /**
+   * Start the AI generation process
+   */
+  private startGeneration(prompt: string): void {
+    EventHelpers.safeEmit('ai:start', { prompt });
+    EventHelpers.safeEmit('app:loading', { isLoading: true });
+    this.setLoadingState(true);
+  }
+
+  /**
+   * Build conversation contents for AI generation
+   */
+  private buildConversationContents(prompt: string, currentCode: string): any[] {
+    const contents = [
+      createUserContent([this.getSystemPrompt()]),
+      createModelContent("I understand. I'm ready to help you create or modify Mermaid diagrams. I'll provide valid Mermaid syntax in code blocks based on your requirements.")
+    ];
+    
+    if (this.previousPrompt) {
+      contents.push(createUserContent([this.previousPrompt]));
+    }
+
+    if (currentCode) {
+      contents.push(createUserContent([`Current diagram code:\n\`\`\`mermaid\n${currentCode}\n\`\`\``]));
+      contents.push(createModelContent("I can see the current diagram. How would you like me to modify it?"));
+    }
+
+    contents.push(createUserContent([prompt]));
+    return contents;
+  }
+
+  /**
+   * Get the system prompt for AI generation
+   */
+  private getSystemPrompt(): string {
+    return `You are a Mermaid diagram expert with access to real-time information and web content analysis. Your role is to create, modify, or improve Mermaid diagram code based on user requests.
 
 Core Capabilities:
 - Create any type of Mermaid diagram: flowcharts, sequence, class, state, ER, journey, pie, quadrant, gitgraph, etc.
@@ -86,6 +138,7 @@ Critical Guidelines:
 - ALWAYS use beautiful, vibrant colors in your diagrams - apply color themes, fill colors, and styling
 - Use descriptive node labels and clear connections based on real-world context
 - Follow the latest Mermaid best practices for readability and maintainability
+- current mermaid version is 11.9.0
 
 Styling Requirements:
 - Always include color styling using classDef or fill attributes
@@ -110,85 +163,64 @@ Response format:
 \`\`\`
 
 If you need more context or current information to create an accurate diagram, I'll search for it automatically.`;
-      
-      let contents = [
-        createUserContent([
-          systematicPrompt
-        ]),
-        createModelContent("I understand. I'm ready to help you create or modify Mermaid diagrams. I'll provide valid Mermaid syntax in code blocks based on your requirements.")
-      ]
-      
-      if (this.previousPrompt) {
-        contents.push(createUserContent([
-          this.previousPrompt
-        ]))
-      }
+  }
 
-      if (currentCode) {
-        contents.push(createUserContent([
-          `Current diagram code:\n\`\`\`mermaid\n${currentCode}\n\`\`\``
-        ]))
-        contents.push(createModelContent("I can see the current diagram. How would you like me to modify it?"))
-      }
+  /**
+   * Build generation parameters for AI request
+   */
+  private buildGenerationParameters(contents: any[]): GenerateContentParameters {
+    const tools: any[] = [];
 
-      contents.push(createUserContent([
-        prompt
-      ]))
-
-      // Build tools array based on configuration
-      const tools: any[] = [];
-
-      if (AI_CONFIG.enableUrlContext) {
-        tools.push({ urlContext: {} });
-      }
-
-      if (AI_CONFIG.enableGrounding) {
-        tools.push({ googleSearch: {} });
-      }
-
-      const parts: GenerateContentParameters = {
-        model: AI_CONFIG.model,
-        contents: contents,
-        config: {
-          ...(tools.length > 0 && { tools }),
-          ...(AI_CONFIG.enableGrounding && AI_CONFIG.dynamicRetrievalThreshold && {
-            dynamicRetrieval: {
-              threshold: AI_CONFIG.dynamicRetrievalThreshold
-            }
-          }),
-          temperature: AI_CONFIG.temperature,
-          maxOutputTokens: AI_CONFIG.maxTokens,
-          thinkingConfig: {
-            thinkingBudget: AI_CONFIG.thinkingBudget || -1
-          }
-        },
-      }
-
-
-      const result = await this.client.models.generateContentStream(parts);
-
-      await this.handleStream(result);
-      inputField.value = "";
-      
-      // Emit completion event
-      EventHelpers.safeEmit('ai:complete', { code: this.editor.getValue() });
-    } catch (error) {
-      console.error("Error processing prompt:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to process prompt with AI. Check your API key";
-      
-      EventHelpers.safeEmit('ai:error', { error: errorMessage });
-      
-      generationStatus.style.display = "block";
-      generationStatus.textContent = `❌ ${errorMessage}`;
-      setTimeout(() => {
-        generationStatus.style.display = "none";
-      }, 5000);
-    } finally {
-      this.setLoadingState(false);
-      EventHelpers.safeEmit('app:loading', { isLoading: false });
+    if (AI_CONFIG.enableUrlContext) {
+      tools.push({ urlContext: {} });
     }
 
-    this.previousPrompt = prompt;
+    if (AI_CONFIG.enableGrounding) {
+      tools.push({ googleSearch: {} });
+    }
+
+    return {
+      model: AI_CONFIG.model,
+      contents: contents,
+      config: {
+        ...(tools.length > 0 && { tools }),
+        ...(AI_CONFIG.enableGrounding && AI_CONFIG.dynamicRetrievalThreshold && {
+          dynamicRetrieval: {
+            threshold: AI_CONFIG.dynamicRetrievalThreshold
+          }
+        }),
+        temperature: AI_CONFIG.temperature,
+        maxOutputTokens: AI_CONFIG.maxTokens,
+        thinkingConfig: {
+          thinkingBudget: AI_CONFIG.thinkingBudget || -1
+        }
+      },
+    };
+  }
+
+  /**
+   * Handle generation errors
+   */
+  private handleGenerationError(error: unknown): void {
+    console.error("Error processing prompt:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to process prompt with AI. Check your API key";
+    
+    EventHelpers.safeEmit('ai:error', { error: errorMessage });
+    
+    const { generationStatus } = this.elements;
+    generationStatus.style.display = "block";
+    generationStatus.textContent = `❌ ${errorMessage}`;
+    setTimeout(() => {
+      generationStatus.style.display = "none";
+    }, 5000);
+  }
+
+  /**
+   * Finish the generation process
+   */
+  private finishGeneration(): void {
+    this.setLoadingState(false);
+    EventHelpers.safeEmit('app:loading', { isLoading: false });
   }
 
   private async handleStream(stream: AsyncGenerator<GenerateContentResponse, any, any>): Promise<void> {

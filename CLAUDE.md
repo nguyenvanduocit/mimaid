@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Development Server**
 ```bash
-bun run dev      # Start development server on http://localhost:5173
+bun run dev      # never run it, user will run it them self
 ```
 
 **Build & Deployment**

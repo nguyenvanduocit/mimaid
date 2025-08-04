@@ -1,5 +1,8 @@
 import { EditorConfig, AIConfig } from './types';
 
+/**
+ * Configuration for editor functionality and constraints
+ */
 export const EDITOR_CONFIG: EditorConfig = {
   minScale: 0.5,
   maxScale: 20,
@@ -7,6 +10,9 @@ export const EDITOR_CONFIG: EditorConfig = {
   zoomFactor: 0.1,
 };
 
+/**
+ * Configuration for AI integration and generation parameters
+ */
 export const AI_CONFIG: AIConfig = {
   apiKey: localStorage.getItem('googleAiApiKey') || import.meta.env.VITE_GOOGLE_AI_API_KEY,
   model: 'gemini-2.5-pro',
@@ -18,18 +24,33 @@ export const AI_CONFIG: AIConfig = {
   dynamicRetrievalThreshold: 0.3, // Control when grounding is used (0.0-1.0)
 };
 
+/**
+ * Configuration for Mermaid diagram rendering
+ */
 export const MERMAID_CONFIG = {
   startOnLoad: false,
 };
 
+/**
+ * Configuration for Monaco Editor settings and features
+ */
 export const MONACO_CONFIG = {
   language: 'mermaid',
   theme: 'mermaid',
   minimap: { enabled: false },
   scrollBeyondLastLine: false,
   automaticLayout: true,
+  glyphMargin: true, // Enable glyph margin for error indicators
+  folding: false, // Disable folding to keep it simple
+  lineNumbers: 'on',
+  lineNumbersMinChars: 3,
+  lineDecorationsWidth: 10,
+  renderLineHighlight: 'all',
 };
 
+/**
+ * Preset prompts for creating new diagrams from scratch
+ */
 export const CREATION_PRESETS = [
   {
     title: "Flowchart",
@@ -65,6 +86,9 @@ export const CREATION_PRESETS = [
   }
 ];
 
+/**
+ * Preset prompts for modifying existing diagrams
+ */
 export const MODIFICATION_PRESETS = [
   {
     title: "Simplify",

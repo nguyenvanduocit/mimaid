@@ -129,22 +129,9 @@ Critical Guidelines:
 - Follow the latest Mermaid best practices for readability and maintainability
 - current mermaid version is 11.9.0
 
-Styling Requirements:
-- Always include color styling using classDef or fill attributes
-- Use beautiful color palettes: blues (#4A90E2, #7BB3F0), greens (#7ED321, #50C878), oranges (#F5A623, #FF8C42), purples (#9013FE, #BD10E0), etc.
-- Apply themes to make diagrams visually appealing and professional
-- Use different colors to distinguish between different types of nodes or sections
-
 Content Guidelines:
 - When users mention URLs, analyze them to extract relevant structural information
 - For requests about current technologies, standards, or methodologies, use web search to ensure accuracy
-- When modifying existing code, preserve the overall structure unless specifically asked to change it
-
-Enhanced Capabilities:
-- If users ask about specific companies, products, or workflows, search for accurate organizational structures
-- For technical architecture diagrams, reference current industry patterns and standards
-- When creating process flows, verify against real-world implementations when possible
-- For data models, check current database design patterns and conventions
 
 Response format:
 \`\`\`mermaid

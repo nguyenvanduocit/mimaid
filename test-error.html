@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Mermaid Error Parsing</title>
+</head>
+<body>
+    <script type="module">
+        import { parseMermaidError } from './src/utils.js';
+
+        // Test cases for error parsing
+        const testCases = [
+            {
+                error: "Parse error on line 3:5",
+                code: "graph TD\n    A --> B\n    invalid syntax here\n    B --> C",
+                expectedLine: 3,
+                expectedColumn: 5
+            },
+            {
+                error: "Syntax error at line 2",
+                code: "sequenceDiagram\n    participant A as Alice\n    Alice->>Bob: Hello",
+                expectedLine: 2,
+                expectedColumn: undefined
+            },
+            {
+                error: "Invalid diagram syntax",
+                code: "graph TD\n    A --> B\n    B !!> C",
+                expectedLine: undefined // Should infer from syntax analysis
+            }
+        ];
+
+        console.log("Testing Mermaid Error Parser:");
+        testCases.forEach((testCase, index) => {
+            console.log(`\nTest Case ${index + 1}:`);
+            console.log("Input error:", testCase.error);
+            console.log("Code:", testCase.code.replace(/\n/g, '\\n'));
+            
+            const result = parseMermaidError(testCase.error, testCase.code);
+            console.log("Parsed result:", result);
+            
+            console.log("✓ Line:", result.line === testCase.expectedLine ? "PASS" : "FAIL");
+            console.log("✓ Column:", result.column === testCase.expectedColumn ? "PASS" : "FAIL");
+            console.log("✓ Message cleaned:", result.message !== testCase.error ? "PASS" : "FAIL");
+        });
+    </script>
+</body>
+</html>

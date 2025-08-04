@@ -47,4 +47,9 @@ export interface GroundingMetadata {
       uri: string;
     }>;
   };
+}
+
+export interface Preset {
+  title: string;
+  prompt: string;
 } 

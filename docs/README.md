@@ -2,90 +2,186 @@
 
 ## Overview
 
-MinimalMermaid là một editor Mermaid diagrams nhẹ, chạy trên browser với tính năng AI generation và real-time collaboration. Ứng dụng được xây dựng với TypeScript, Monaco Editor và tích hợp Google Generative AI.
+MinimalMermaid is a modern, browser-based Mermaid diagram editor with AI-powered generation and real-time collaboration capabilities. Built with TypeScript, Vite, and Monaco Editor.
+
+## Quick Links
+
+- **[API Documentation](./api.md)** - Complete API reference for all classes and methods
+- **[Development Guide](./development-guide.md)** - Comprehensive development workflow and patterns
+- **[Project Structure](#project-structure)** - File organization and architecture overview
 
 ## Features
 
-### Core Features
-- **Real-time Mermaid Preview**: Preview diagrams ngay lập tức khi gõ code
-- **Monaco Editor Integration**: Syntax highlighting và auto-completion cho Mermaid
-- **AI-Powered Generation**: Tạo diagrams từ natural language prompts
-- **Real-time Collaboration**: Collaborative editing với Liveblocks
-- **Export Capabilities**: Xuất diagrams dưới dạng SVG/PNG
-- **URL Sharing**: Chia sẻ diagrams qua compressed URL hash
+### 🤖 AI-Powered Generation
+- **Google Gemini 2.5 Pro Integration** with real-time grounding
+- **URL Context Analysis** for extracting diagram information
+- **Automatic Error Fixing** with retry mechanisms
+- **Preset System** for common diagram patterns
 
-### Technical Features
-- **TypeScript**: Type-safe development
-- **Vite**: Fast build tool và HMR
-- **Performance Optimized**: Debouncing, lazy loading, efficient rendering
-- **Responsive Design**: Hoạt động tốt trên desktop và mobile
-- **Local Storage**: Lưu trữ settings và API keys
+### 👥 Real-time Collaboration
+- **Liveblocks + Y.js CRDT** for conflict-free editing
+- **Multi-user Awareness** with cursor tracking
+- **Room-based Sessions** via URL parameters
 
-## Quick Start
+### 📝 Advanced Editor
+- **Monaco Editor** with custom Mermaid language support
+- **Syntax Highlighting** and error detection
+- **Dark Theme** optimized for diagram editing
+- **Responsive Layout** with resizable panes
 
-### Development Setup
+### 📤 Export & Sharing
+- **SVG Export** with full diagram fidelity
+- **PNG Export** with high-quality rendering
+- **URL Sharing** with compressed diagram state
+- **Pan & Zoom** for large diagrams
 
+## Getting Started
+
+### Prerequisites
+- Node.js v18+
+- Bun package manager
+- Modern browser with ES2020 support
+
+### Installation
 ```bash
-# Clone repository
-git clone <repository-url>
+git clone <repository>
 cd minimalmermaid
-
-# Install dependencies
 bun install
-
-# Start development server
 bun run dev
 ```
 
-### Environment Variables
-
-Create `.env` file:
-```env
-VITE_GOOGLE_AI_API_KEY=your_gemini_api_key
-VITE_LIVEBLOCKS_PUBLIC_API_KEY=your_liveblocks_key
-```
-
-### Production Build
-
+### Environment Setup (Optional)
 ```bash
-bun run build
-bun run preview
+# .env
+VITE_LIVEBLOCKS_PUBLIC_API_KEY=your_liveblocks_key
+VITE_GOOGLE_AI_API_KEY=your_google_ai_key
 ```
 
-## Documentation Structure
+## Project Structure
 
-- [Architecture](./architecture.md) - System architecture và design patterns
-- [API Reference](./api-reference.md) - Detailed API documentation
-- [Components](./components.md) - Component documentation
-- [Configuration](./configuration.md) - Configuration options
-- [Deployment](./deployment.md) - Deployment guide
-- [Development](./development.md) - Development workflow
-- [Troubleshooting](./troubleshooting.md) - Common issues và solutions
+```
+minimalmermaid/
+├── src/
+│   ├── main.ts                    # MermaidEditor class & app entry
+│   ├── ai-handler.ts             # Google Gemini AI integration
+│   ├── collaboration.ts          # Liveblocks/Y.js collaboration
+│   ├── config.ts                 # Configuration constants
+│   ├── configMermaidLanguage.ts  # Monaco Mermaid language
+│   ├── types.ts                  # TypeScript interfaces
+│   ├── utils.ts                  # Utility functions
+│   └── style.css                 # Application styles
+├── docs/
+│   ├── README.md                 # This file
+│   ├── api.md                    # API documentation
+│   └── development-guide.md      # Development guide
+├── package.json                  # Dependencies and scripts
+├── tsconfig.json                 # TypeScript configuration
+├── vite.config.ts               # Vite build configuration
+└── CLAUDE.md                    # AI assistant instructions
+```
+
+## Architecture Overview
+
+### Core Components
+- **MermaidEditor**: Main application controller
+- **AIHandler**: Google Gemini AI integration
+- **CollaborationHandler**: Real-time collaboration
+- **Monaco Editor**: Code editing with custom language
+- **Mermaid.js**: Diagram rendering engine
+
+### Key Patterns
+- **Event-Driven Architecture**: Component communication via events
+- **Lazy Loading**: Dynamic imports for performance
+- **Debounced Updates**: Smooth real-time editing
+- **State Compression**: URL-based diagram sharing
+- **CRDT Collaboration**: Conflict-free multi-user editing
+
+### Data Flow
+```mermaid
+graph TD
+    A[User Input] --> B[Monaco Editor]
+    B --> C[Debounced Update]
+    C --> D[Mermaid Parser]
+    D --> E[SVG Rendering]
+    E --> F[Pan/Zoom Display]
+    
+    G[AI Prompt] --> H[Gemini API]
+    H --> I[Streaming Response]
+    I --> B
+    
+    J[Collaboration] --> K[Y.js CRDT]
+    K --> L[Liveblocks Sync]
+    L --> B
+```
 
 ## Usage Examples
 
-### Basic Mermaid Diagram
-```mermaid
-graph TD
-    A[Start] --> B{Decision}
-    B -->|Yes| C[Action 1]
-    B -->|No| D[Action 2]
+### AI Generation
+```javascript
+// Enter prompts like:
+"Create a flowchart for user authentication"
+"Add error handling to the current diagram"
+"Convert this to a sequence diagram"
 ```
 
-### AI Generation
-1. Nhập prompt: "Create a flowchart for user login process"
-2. AI sẽ generate Mermaid code tương ứng
-3. Preview tự động cập nhật
-
 ### Collaboration
-1. Thêm `?room=room-name&name=your-name` vào URL
-2. Chia sẻ URL với team members
-3. Real-time collaborative editing
+```
+https://your-domain.com/?room=project-alpha&name=John
+```
+
+### URL Sharing
+```
+https://your-domain.com/#N4IgdghgtgLgBh...  // Compressed diagram
+```
+
+## Browser Compatibility
+
+### Minimum Requirements
+- **Chrome**: 90+
+- **Firefox**: 88+
+- **Safari**: 14+
+- **Edge**: 90+
+
+### Required Features
+- ES2020 support
+- WebSocket for collaboration
+- Local Storage for settings
+- Canvas API for PNG export
+- ResizeObserver for layout
+
+## Development Commands
+
+```bash
+bun run dev      # Start development server
+bun run build    # Production build
+bun run preview  # Preview production build
+```
 
 ## Contributing
 
-Xem [Development Guide](./development.md) để biết chi tiết về development workflow và coding standards.
+### Development Workflow
+1. Create feature branch from `main`
+2. Follow established patterns (see [Development Guide](./development-guide.md))
+3. Test manually through web interface
+4. Update documentation as needed
+5. Submit pull request with description
+
+### Code Standards
+- TypeScript strict mode
+- Comprehensive error handling
+- Performance-conscious implementations  
+- Accessibility compliance
+- Clear documentation
+
+## Documentation Structure
+
+- **[API Documentation](./api.md)** - Complete class and method reference
+- **[Development Guide](./development-guide.md)** - Patterns, workflows, and best practices
+- **[Architecture](./architecture.md)** - System design and component relationships
+- **[Configuration](./configuration.md)** - Settings and environment variables
+- **[Deployment](./deployment.md)** - Production deployment guide
+- **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions
 
 ## License
 
-MIT License - xem LICENSE file để biết chi tiết. 
+[Add your license information here] 

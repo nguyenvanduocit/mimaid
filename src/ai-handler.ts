@@ -1,6 +1,7 @@
 import { createModelContent, createUserContent, GenerateContentParameters, GenerateContentResponse, GoogleGenAI } from "@google/genai";
 import { AI_CONFIG } from "./config";
 import { GroundingMetadata } from "./types";
+import { EventHelpers } from "./events";
 
 export class AIHandler {
   private client: GoogleGenAI;
@@ -25,6 +26,37 @@ export class AIHandler {
     this.elements = elements;
     this.client = new GoogleGenAI({apiKey: AI_CONFIG.apiKey});
     this.previousPrompt = "";
+    
+    // Listen for UI events
+    this.setupEventListeners();
+  }
+
+  private setupEventListeners(): void {
+    // Listen for input submissions
+    EventHelpers.safeListen('ui:input:submit', async ({ prompt }) => {
+      this.elements.inputField.value = prompt;
+      await this.handleSubmit();
+    });
+
+    // Listen for preset selections
+    EventHelpers.safeListen('ui:preset:select', async ({ preset, isModification }) => {
+      let finalPrompt = preset.prompt;
+
+      if (isModification && this.editor) {
+        const currentCode = this.editor.getValue().trim();
+        finalPrompt = `${preset.prompt}
+
+Current diagram:
+\`\`\`mermaid
+${currentCode}
+\`\`\`
+
+Please provide the modified Mermaid diagram code.`;
+      }
+
+      this.elements.inputField.value = finalPrompt;
+      await this.handleSubmit();
+    });
   }
 
   async handleSubmit(): Promise<void> {
@@ -33,6 +65,10 @@ export class AIHandler {
     if (!prompt) return;
 
     try {
+      // Emit AI start event
+      EventHelpers.safeEmit('ai:start', { prompt });
+      EventHelpers.safeEmit('app:loading', { isLoading: true });
+      
       this.setLoadingState(true);
       const currentCode = this.editor.getValue();
 
@@ -44,13 +80,23 @@ Core Capabilities:
 - Analyze URLs provided by users to extract diagram-worthy information
 - Research real-world examples and industry standards for accurate diagram creation
 
-Guidelines:
+Critical Guidelines:
 - Always respond with valid Mermaid syntax wrapped in \`\`\`mermaid code blocks
+- NEVER use markdown formatting (bold, italic, links, etc.) inside diagram nodes or labels - Mermaid does not support markdown
+- ALWAYS use beautiful, vibrant colors in your diagrams - apply color themes, fill colors, and styling
+- Use descriptive node labels and clear connections based on real-world context
+- Follow the latest Mermaid best practices for readability and maintainability
+
+Styling Requirements:
+- Always include color styling using classDef or fill attributes
+- Use beautiful color palettes: blues (#4A90E2, #7BB3F0), greens (#7ED321, #50C878), oranges (#F5A623, #FF8C42), purples (#9013FE, #BD10E0), etc.
+- Apply themes to make diagrams visually appealing and professional
+- Use different colors to distinguish between different types of nodes or sections
+
+Content Guidelines:
 - When users mention URLs, analyze them to extract relevant structural information
 - For requests about current technologies, standards, or methodologies, use web search to ensure accuracy
 - When modifying existing code, preserve the overall structure unless specifically asked to change it
-- Use descriptive node labels and clear connections based on real-world context
-- Follow the latest Mermaid best practices for readability and maintainability
 
 Enhanced Capabilities:
 - If users ask about specific companies, products, or workflows, search for accurate organizational structures
@@ -60,7 +106,7 @@ Enhanced Capabilities:
 
 Response format:
 \`\`\`mermaid
-[your mermaid code here]
+[your mermaid code here with beautiful colors and NO markdown formatting]
 \`\`\`
 
 If you need more context or current information to create an accurate diagram, I'll search for it automatically.`;
@@ -123,15 +169,23 @@ If you need more context or current information to create an accurate diagram, I
 
       await this.handleStream(result);
       inputField.value = "";
+      
+      // Emit completion event
+      EventHelpers.safeEmit('ai:complete', { code: this.editor.getValue() });
     } catch (error) {
       console.error("Error processing prompt:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to process prompt with AI. Check your API key";
+      
+      EventHelpers.safeEmit('ai:error', { error: errorMessage });
+      
       generationStatus.style.display = "block";
-      generationStatus.textContent = "❌ Failed to process prompt with AI. Check your API key";
+      generationStatus.textContent = `❌ ${errorMessage}`;
       setTimeout(() => {
         generationStatus.style.display = "none";
       }, 5000);
     } finally {
       this.setLoadingState(false);
+      EventHelpers.safeEmit('app:loading', { isLoading: false });
     }
 
     this.previousPrompt = prompt;
@@ -147,6 +201,7 @@ If you need more context or current information to create an accurate diagram, I
       if ('groundingMetadata' in chunk && chunk.groundingMetadata) {
         this.groundingMetadata = chunk.groundingMetadata as GroundingMetadata;
         this.displayGroundingInfo(this.groundingMetadata);
+        EventHelpers.safeEmit('ai:grounding', { metadata: this.groundingMetadata });
       }
 
       if (chunk.text) {
@@ -184,14 +239,21 @@ If you need more context or current information to create an accurate diagram, I
     generationStatus.style.display = loading ? "block" : "none";
     generationStatus.textContent = loading ? "AI is generating..." : "";
     inputField.style.opacity = loading ? "0.5" : "1";
+    
+    // Emit progress event
+    if (loading) {
+      EventHelpers.safeEmit('ai:progress', { status: 'AI is generating...' });
+    }
   }
 
   private displayGroundingInfo(metadata: GroundingMetadata): void {
 
-    // Update status to show grounding was used
+    // Update status to show grounding was used  
     if (metadata.webSearchQueries?.length || metadata.groundingSources?.length) {
       const { generationStatus } = this.elements;
-      generationStatus.textContent = "✨ AI is generating with real-time information...";
+      const status = "✨ AI is generating with real-time information...";
+      generationStatus.textContent = status;
+      EventHelpers.safeEmit('ai:progress', { status });
     }
   }
 

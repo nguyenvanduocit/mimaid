@@ -7,6 +7,7 @@ import { EDITOR_CONFIG, MONACO_CONFIG, MERMAID_CONFIG, CREATION_PRESETS, MODIFIC
 import { AIHandler } from "./ai-handler";
 import { CollaborationHandler } from "./collaboration";
 import { debounce, loadDiagramFromURL, generateDiagramHash, getStoredEditorWidth, setStoredEditorWidth } from "./utils";
+import { EventHelpers } from "./events";
 
 // Lazy load Monaco editor
 let monacoInstance: any | null = null;
@@ -44,9 +45,13 @@ class MermaidEditor {
     this.initializeDOM();
     this.initializeMermaid();
     this.setupEventListeners();
+    this.setupAppEventListeners();
     this.loadInitialState();
     this.updateInputAreaVisibility();
     this.setupPresets();
+    
+    // Emit app ready event
+    EventHelpers.safeEmit('app:ready', {});
   }
 
   private initializeDOM(): void {
@@ -115,6 +120,9 @@ class MermaidEditor {
     this.setupEditorEventListeners();
 
     this.setupHandlers();
+    
+    // Emit editor ready event
+    EventHelpers.safeEmit('editor:ready', { editor: this.editor });
   }
 
   private async setupHandlers(): Promise<void> {
@@ -149,13 +157,16 @@ class MermaidEditor {
   }
 
   private setupEditorEventListeners(): void {
-    const debouncedUpdatePreview = debounce(this.updatePreview.bind(this), 250);
+    const debouncedEmitChange = debounce((code: string) => {
+      EventHelpers.safeEmit('editor:change', { code });
+    }, 250);
     const debouncedGenerateDiagramHash = debounce((code: string) => generateDiagramHash(code), 250);
     
     this.editor.onDidChangeModelContent(() => {
       requestAnimationFrame(() => {
-        debouncedUpdatePreview();
-        debouncedGenerateDiagramHash(this.editor.getValue());
+        const code = this.editor.getValue();
+        debouncedEmitChange(code);
+        debouncedGenerateDiagramHash(code);
       });
     });
   }
@@ -164,11 +175,52 @@ class MermaidEditor {
     this.setupResizeListeners();
     this.setupInputListeners();
 
-    this.elements.exportButton.addEventListener("click", () => this.exportToSvg());
-    this.elements.exportPngButton.addEventListener("click", () => this.exportToPng());
-    this.elements.zoomInButton.addEventListener("click", () => this.handleZoomButtonClick(EDITOR_CONFIG.zoomFactor));
-    this.elements.zoomOutButton.addEventListener("click", () => this.handleZoomButtonClick(-EDITOR_CONFIG.zoomFactor));
+    this.elements.exportButton.addEventListener("click", () => {
+      EventHelpers.safeEmit('diagram:export', { format: 'svg' });
+      this.exportToSvg();
+    });
+    this.elements.exportPngButton.addEventListener("click", () => {
+      EventHelpers.safeEmit('diagram:export', { format: 'png' });
+      this.exportToPng();
+    });
+    this.elements.zoomInButton.addEventListener("click", () => {
+      EventHelpers.safeEmit('ui:zoom', { direction: 'in' });
+      this.handleZoomButtonClick(EDITOR_CONFIG.zoomFactor);
+    });
+    this.elements.zoomOutButton.addEventListener("click", () => {
+      EventHelpers.safeEmit('ui:zoom', { direction: 'out' });
+      this.handleZoomButtonClick(-EDITOR_CONFIG.zoomFactor);
+    });
     this.setupSettingsListeners();
+  }
+
+  private setupAppEventListeners(): void {
+    // Listen for editor changes to trigger diagram rendering
+    EventHelpers.safeListen('editor:change', async ({ code }) => {
+      await this.renderDiagram(code);
+    });
+
+    // Listen for AI completion to trigger diagram update
+    EventHelpers.safeListen('ai:complete', async ({ code }) => {
+      EventHelpers.safeEmit('editor:change', { code });
+    });
+
+    // Listen for diagram render requests
+    EventHelpers.safeListen('diagram:render', async ({ code }) => {
+      await this.renderMermaidDiagram(code);
+    });
+
+    // Listen for app loading state changes
+    EventHelpers.safeListen('app:loading', ({ isLoading }) => {
+      // Update global loading state if needed
+      document.body.classList.toggle('loading', isLoading);
+    });
+    
+    // Listen for app errors
+    EventHelpers.safeListen('app:error', ({ error }) => {
+      console.error('App error:', error);
+      this.showError(error);
+    });
   }
 
   private setupInputListeners(): void {
@@ -177,8 +229,9 @@ class MermaidEditor {
       inputField.addEventListener("keydown", async (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
-          if (this.aiHandler) {
-            await this.aiHandler.handleSubmit();
+          const prompt = inputField.value.trim();
+          if (prompt) {
+            EventHelpers.safeEmit('ui:input:submit', { prompt });
           }
         }
       });
@@ -194,6 +247,7 @@ class MermaidEditor {
     apiTokenInput.value = localStorage.getItem("googleAiApiKey") || "";
 
     settingsBtn.addEventListener("click", () => {
+      EventHelpers.safeEmit('ui:settings:open', {});
       settingsDialog.classList.toggle("hidden");
       if (!settingsDialog.classList.contains("hidden")) {
         apiTokenInput.focus();
@@ -206,19 +260,27 @@ class MermaidEditor {
       AI_CONFIG.apiKey = apiToken;
       settingsDialog.classList.add("hidden");
       
+      // Emit settings save event
+      EventHelpers.safeEmit('ui:settings:save', { apiKey: apiToken });
+      
       // Update input area visibility after saving settings
       this.updateInputAreaVisibility();
       
-      // Re-initialize AI handler if API key is now available
+      // Initialize or clear AI handler based on API key availability
       if (apiToken && apiToken.trim().length > 0) {
-        const inputField = document.querySelector<HTMLInputElement>("#input-field")!;
-        const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
-        
-        this.aiHandler = new AIHandler(this.editor, {
-          inputField,
-          inputArea,
-          generationStatus: this.elements.generationStatus
-        });
+        // Only create AI handler if it doesn't exist yet
+        if (!this.aiHandler) {
+          const inputField = document.querySelector<HTMLInputElement>("#input-field");
+          const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
+          
+          if (inputField) {
+            this.aiHandler = new AIHandler(this.editor, {
+              inputField,
+              inputArea,
+              generationStatus: this.elements.generationStatus
+            });
+          }
+        }
       } else {
         // Clear AI handler if API key is removed
         this.aiHandler = null as any;
@@ -259,7 +321,9 @@ class MermaidEditor {
       state.isResizing = false;
       document.removeEventListener("mousemove", this.handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
-      setStoredEditorWidth(this.elements.editorPane.style.flexBasis);
+      const width = this.elements.editorPane.style.flexBasis;
+      setStoredEditorWidth(width);
+      EventHelpers.safeEmit('editor:resize', { width });
     };
 
     this.elements.handle.addEventListener("mousedown", () => {
@@ -312,6 +376,9 @@ class MermaidEditor {
           });
         }
         
+        // Emit diagram rendered event
+        EventHelpers.safeEmit('diagram:rendered', { svg: result.svg });
+        
         // Clean up
         document.body.removeChild(tempDiv);
       });
@@ -319,6 +386,11 @@ class MermaidEditor {
       console.error("Failed to render diagram:", error);
       const errorMessage = error instanceof Error ? error.message : "Failed to render diagram";
       this.currentError = errorMessage;
+      
+      // Emit diagram error event
+      EventHelpers.safeEmit('diagram:error', { error: errorMessage });
+      EventHelpers.safeEmit('editor:error', { error: errorMessage });
+      
       this.showError(errorMessage);
       
       // Automatically attempt to fix the error if we haven't exceeded max attempts and aren't already auto-fixing
@@ -337,14 +409,6 @@ class MermaidEditor {
     }
   }
 
-  private updatePreview = async (): Promise<void> => {
-    const code = this.editor.getValue();
-    if (code.trim().length > 0) {
-      await this.renderMermaidDiagram(code);
-    } else {
-      this.elements.mermaidPreview.innerHTML = "";
-    }
-  };
 
   private async renderDiagram(code: string): Promise<void> {
     await this.renderMermaidDiagram(code);
@@ -367,6 +431,13 @@ class MermaidEditor {
     this.currentError = null;
     this.autoFixRetryCount = 0; // Reset retry count when error is cleared
     this.isAutoFixing = false; // Reset auto-fixing flag
+    
+    // Hide error-specific elements
+    const fixButton = document.querySelector<HTMLButtonElement>("#fix-with-ai-btn");
+    const errorWarning = document.querySelector<HTMLDivElement>(".api-key-warning.error-state");
+    if (fixButton) fixButton.style.display = "none";
+    if (errorWarning) errorWarning.style.display = "none";
+    
     // Restore normal input area when error is cleared
     this.updateInputAreaVisibility();
   }
@@ -443,38 +514,59 @@ class MermaidEditor {
 
   private showFixWithAIOption(): void {
     const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
+    const inputField = document.querySelector<HTMLInputElement>("#input-field");
+    const presetButton = document.querySelector<HTMLButtonElement>("#preset-btn");
+    const presetCard = document.querySelector<HTMLDivElement>("#preset-card");
+    const apiKeyWarning = document.querySelector<HTMLDivElement>(".api-key-warning");
+    const fixButton = document.querySelector<HTMLButtonElement>("#fix-with-ai-btn");
     const apiKey = localStorage.getItem("googleAiApiKey") || "";
     
+    // Hide normal input elements
+    if (inputField) inputField.style.display = "none";
+    if (presetButton) presetButton.style.display = "none";
+    if (presetCard) presetCard.classList.add("hidden");
+    if (apiKeyWarning) apiKeyWarning.style.display = "none";
+    
     if (apiKey && apiKey.trim().length > 0) {
-      // Show fix with AI button when there's an error and API key is available
-      inputArea.innerHTML = `
-        <button id="fix-with-ai-btn" class="fix-with-ai-button" title="Fix this Mermaid diagram with AI">
+      // Show or create fix with AI button when there's an error and API key is available
+      if (!fixButton) {
+        const newFixButton = document.createElement("button");
+        newFixButton.id = "fix-with-ai-btn";
+        newFixButton.className = "fix-with-ai-button";
+        newFixButton.title = "Fix this Mermaid diagram with AI";
+        newFixButton.innerHTML = `
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
           </svg>
           Fix with AI
-        </button>
-      `;
-      
-      // Attach event listener to the fix button
-      const fixButton = document.querySelector<HTMLButtonElement>("#fix-with-ai-btn");
-      if (fixButton) {
-        fixButton.addEventListener("click", async () => {
+        `;
+        inputArea.appendChild(newFixButton);
+        
+        // Attach event listener to the fix button
+        newFixButton.addEventListener("click", async () => {
           await this.handleFixWithAI();
         });
+      } else {
+        fixButton.style.display = "block";
       }
     } else {
-      // Show API key warning when there's an error but no API key
-      inputArea.innerHTML = `
-        <div class="api-key-warning error-state">
+      // Show or create API key warning when there's an error but no API key
+      let errorWarning = document.querySelector<HTMLDivElement>(".api-key-warning.error-state");
+      if (!errorWarning) {
+        errorWarning = document.createElement("div");
+        errorWarning.className = "api-key-warning error-state";
+        errorWarning.innerHTML = `
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
             <line x1="12" y1="9" x2="12" y2="13"></line>
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
           </svg>
           <span>Set up your Google AI API key in settings to fix errors with AI</span>
-        </div>
-      `;
+        `;
+        inputArea.appendChild(errorWarning);
+      } else {
+        errorWarning.style.display = "flex";
+      }
     }
   }
 
@@ -496,19 +588,39 @@ ${currentCode}
 
 Please provide the corrected Mermaid diagram code that fixes this error while preserving the intent of the original diagram.`;
 
-    // Create a temporary input field and restore the normal input area
+    // Get or create the input field without removing existing ones
     const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
-    inputArea.innerHTML = `<input type="text" id="input-field" style="display: none;" />`;
-    const tempInputField = document.querySelector<HTMLInputElement>("#input-field")!;
-    tempInputField.value = fixPrompt;
+    let inputField = document.querySelector<HTMLInputElement>("#input-field");
     
-    // Re-create AI handler with the temporary input field to ensure proper element references
-    const generationStatus = this.elements.generationStatus;
-    this.aiHandler = new AIHandler(this.editor, {
-      inputField: tempInputField,
-      inputArea: inputArea,
-      generationStatus: generationStatus
-    });
+    if (!inputField) {
+      inputField = document.createElement("input");
+      inputField.type = "text";
+      inputField.id = "input-field";
+      inputField.style.display = "none";
+      inputArea.appendChild(inputField);
+      
+      // Attach event listener to the new input field
+      inputField.addEventListener("keydown", async (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          if (this.aiHandler) {
+            await this.aiHandler.handleSubmit();
+          }
+        }
+      });
+    }
+    
+    // Set the fix prompt as the input value
+    inputField.value = fixPrompt;
+    
+    // Ensure AI handler is properly initialized with current DOM elements
+    if (!this.aiHandler) {
+      this.aiHandler = new AIHandler(this.editor, {
+        inputField,
+        inputArea,
+        generationStatus: this.elements.generationStatus
+      });
+    }
     
     await this.aiHandler.handleSubmit();
   }
@@ -588,43 +700,47 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     }
 
     const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
+    const inputField = document.querySelector<HTMLInputElement>("#input-field");
+    const presetButton = document.querySelector<HTMLButtonElement>("#preset-btn");
+    const presetCard = document.querySelector<HTMLDivElement>("#preset-card");
+    const apiKeyWarning = document.querySelector<HTMLDivElement>(".api-key-warning");
     const apiKey = localStorage.getItem("googleAiApiKey") || "";
     
     if (!apiKey || apiKey.trim().length === 0) {
-      // Show message instead of input field
-      inputArea.innerHTML = `
-        <div class="api-key-warning">
+      // Hide input field and preset elements, show API key warning
+      if (inputField) inputField.style.display = "none";
+      if (presetButton) presetButton.style.display = "none";
+      if (presetCard) presetCard.classList.add("hidden");
+      
+      // Show or create API key warning
+      if (!apiKeyWarning) {
+        const warningDiv = document.createElement("div");
+        warningDiv.className = "api-key-warning";
+        warningDiv.innerHTML = `
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
             <line x1="12" y1="9" x2="12" y2="13"></line>
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
           </svg>
           <span>Please set up your Google AI API key in settings to use AI features</span>
-        </div>
-      `;
+        `;
+        inputArea.appendChild(warningDiv);
+      } else {
+        apiKeyWarning.style.display = "flex";
+      }
     } else {
-      // Show input field with preset button
-      inputArea.innerHTML = `
-        <button id="preset-btn" class="preset-button" title="Choose from presets">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <path d="M9 9h6v6H9z"/>
-          </svg>
-        </button>
-        <input type="text" id="input-field" placeholder="Enter your prompt here and press enter..." />
-        <div id="preset-card" class="preset-card hidden">
-          <div class="preset-header">
-            <h3>Choose a preset</h3>
-          </div>
-          <div class="preset-grid" id="preset-grid">
-            <!-- Preset items will be populated by JavaScript -->
-          </div>
-        </div>
-      `;
+      // Show input field and preset elements, hide API key warning
+      if (apiKeyWarning) apiKeyWarning.style.display = "none";
       
-      // Re-attach event listeners to the new input field
-      const newInputField = document.querySelector<HTMLInputElement>("#input-field");
-      if (newInputField) {
+      // Create input field and preset elements if they don't exist
+      if (!inputField) {
+        const newInputField = document.createElement("input");
+        newInputField.type = "text";
+        newInputField.id = "input-field";
+        newInputField.placeholder = "Enter your prompt here and press enter...";
+        inputArea.appendChild(newInputField);
+        
+        // Attach event listener to the new input field
         newInputField.addEventListener("keydown", async (e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
@@ -633,9 +749,45 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
             }
           }
         });
+      } else {
+        inputField.style.display = "block";
+      }
+      
+      if (!presetButton) {
+        const newPresetButton = document.createElement("button");
+        newPresetButton.id = "preset-btn";
+        newPresetButton.className = "preset-button";
+        newPresetButton.title = "Choose from presets";
+        newPresetButton.innerHTML = `
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <path d="M9 9h6v6H9z"/>
+          </svg>
+        `;
+        inputArea.insertBefore(newPresetButton, inputArea.firstChild);
+      } else {
+        presetButton.style.display = "block";
+      }
+      
+      if (!presetCard) {
+        const newPresetCard = document.createElement("div");
+        newPresetCard.id = "preset-card";
+        newPresetCard.className = "preset-card hidden";
+        newPresetCard.innerHTML = `
+          <div class="preset-header">
+            <h3>Choose a preset</h3>
+          </div>
+          <div class="preset-grid" id="preset-grid">
+            <!-- Preset items will be populated by JavaScript -->
+          </div>
+        `;
+        inputArea.appendChild(newPresetCard);
+      } else {
+        // Always ensure the preset card is hidden initially
+        presetCard.classList.add("hidden");
       }
 
-      // Re-setup presets after DOM update
+      // Re-setup presets after ensuring elements exist
       this.setupPresets();
     }
   }
@@ -713,7 +865,8 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
       const preset = presets[presetIndex];
       
       if (preset) {
-        await this.selectPreset(preset.prompt, presetType === "modification");
+        const isModification = presetType === "modification";
+        EventHelpers.safeEmit('ui:preset:select', { preset, isModification });
         presetCard.classList.add("hidden");
       }
     });
@@ -737,34 +890,6 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     });
   }
 
-  private async selectPreset(prompt: string, isModification: boolean = false): Promise<void> {
-    const inputField = document.querySelector<HTMLInputElement>("#input-field");
-    if (!inputField) return;
-
-    let finalPrompt = prompt;
-
-    // For modification presets, include the current diagram context
-    if (isModification && this.editor) {
-      const currentCode = this.editor.getValue().trim();
-      finalPrompt = `${prompt}
-
-Current diagram:
-\`\`\`mermaid
-${currentCode}
-\`\`\`
-
-Please provide the modified Mermaid diagram code.`;
-    }
-
-    // Fill the input field with the preset prompt
-    inputField.value = finalPrompt;
-    inputField.focus();
-
-    // Auto-submit if AI handler is available
-    if (this.aiHandler) {
-      await this.aiHandler.handleSubmit();
-    }
-  }
 }
 
 // Initialize the editor

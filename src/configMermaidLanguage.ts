@@ -9,6 +9,7 @@ export const configureMermaidLanguage = (monaco: any) => {
     "designConstraint",
   ];
 
+  // Enhanced keywords with more comprehensive coverage
   const keywords = {
     timeline: {
       typeKeywords: ["timeline"],
@@ -33,96 +34,66 @@ export const configureMermaidLanguage = (monaco: any) => {
       typeKeywords: ["flowchart", "flowchart-v2", "graph"],
       blockKeywords: ["subgraph", "end"],
       keywords: [
-        "TB",
-        "TD",
-        "BT",
-        "RL",
-        "LR",
-        "click",
-        "call",
-        "href",
-        "_self",
-        "_blank",
-        "_parent",
-        "_top",
-        "linkStyle",
-        "style",
-        "classDef",
-        "class",
-        "direction",
-        "interpolate",
+        "TB", "TD", "BT", "RL", "LR",
+        "click", "call", "href",
+        "_self", "_blank", "_parent", "_top",
+        "linkStyle", "style", "classDef", "class",
+        "direction", "interpolate",
+        // Enhanced with more flowchart keywords
+        "fill", "stroke", "stroke-width", "stroke-dasharray",
+        "color", "background", "border", "border-radius",
+        "font-size", "font-family", "font-weight",
       ],
     },
     sequenceDiagram: {
       typeKeywords: ["sequenceDiagram"],
       blockKeywords: [
-        "alt",
-        "par",
-        "and",
-        "loop",
-        "else",
-        "end",
-        "rect",
-        "opt",
-        "alt",
-        "rect",
+        "alt", "par", "and", "loop", "else", "end", 
+        "rect", "opt", "break", "critical", "ignore",
       ],
       keywords: [
-        "participant",
-        "as",
-        "Note",
-        "note",
-        "right of",
-        "left of",
-        "over",
-        "activate",
-        "deactivate",
-        "autonumber",
-        "title",
-        "actor",
-        "accDescription",
-        "link",
-        "links",
+        "participant", "actor", "as",
+        "Note", "note", "right of", "left of", "over",
+        "activate", "deactivate", "destroy",
+        "autonumber", "title", "accDescription",
+        "link", "links", "properties",
+        // Enhanced sequence diagram keywords
+        "box", "rgba", "rgb", "transparent",
       ],
     },
     classDiagram: {
       typeKeywords: ["classDiagram", "classDiagram-v2"],
-      blockKeywords: ["class"],
+      blockKeywords: ["class", "namespace"],
       keywords: [
-        "link",
-        "click",
-        "callback",
-        "call",
-        "href",
-        "cssClass",
-        "direction",
-        "TB",
-        "BT",
-        "RL",
-        "LR",
-        "title",
-        "accDescription",
-        "order",
+        "link", "click", "callback", "call", "href",
+        "cssClass", "direction", "TB", "BT", "RL", "LR",
+        "title", "accDescription", "order",
+        // Enhanced class diagram keywords
+        "interface", "abstract", "enum", "annotation",
+        "public", "private", "protected", "internal",
+        "static", "final", "abstract",
       ],
     },
     stateDiagram: {
       typeKeywords: ["stateDiagram", "stateDiagram-v2"],
       blockKeywords: ["state", "note", "end"],
       keywords: [
-        "state",
-        "as",
-        "hide empty description",
-        "direction",
-        "TB",
-        "BT",
-        "RL",
-        "LR",
+        "state", "as", "hide empty description",
+        "direction", "TB", "BT", "RL", "LR",
+        // Enhanced state diagram keywords
+        "fork", "join", "choice", "concurrent",
       ],
     },
     erDiagram: {
       typeKeywords: ["erDiagram"],
       blockKeywords: [],
-      keywords: ["title", "accDescription"],
+      keywords: [
+        "title", "accDescription",
+        // Enhanced ER diagram keywords
+        "PK", "FK", "UK", "int", "string", "varchar", "char",
+        "date", "datetime", "boolean", "decimal", "float",
+        "one", "zero-or-one", "one-or-more", "zero-or-more",
+      ],
     },
     journey: {
       typeKeywords: ["journey"],
@@ -138,118 +109,113 @@ export const configureMermaidLanguage = (monaco: any) => {
       typeKeywords: ["gantt"],
       blockKeywords: [],
       keywords: [
-        "title",
-        "dateFormat",
-        "axisFormat",
-        "todayMarker",
-        "section",
-        "excludes",
-        "inclusiveEndDates",
+        "title", "dateFormat", "axisFormat", "todayMarker",
+        "section", "excludes", "inclusiveEndDates",
+        // Enhanced Gantt keywords
+        "weekday", "monday", "tuesday", "wednesday", "thursday",
+        "friday", "saturday", "sunday",
+        "done", "active", "milestone", "crit",
       ],
     },
     requirementDiagram: {
       typeKeywords: ["requirement", "requirementDiagram"],
       blockKeywords: requirementDiagrams.concat("element"),
-      keywords: [],
+      keywords: [
+        // Enhanced requirement diagram keywords
+        "id", "text", "risk", "verifymethod", "type",
+        "low", "medium", "high", "analysis", "test", "inspection", "demonstration",
+      ],
     },
     gitGraph: {
       typeKeywords: ["gitGraph"],
       blockKeywords: [],
       keywords: [
-        "accTitle",
-        "accDescr",
-        "commit",
-        "cherry-pick",
-        "branch",
-        "merge",
-        "reset",
-        "checkout",
-        "LR",
-        "BT",
-        "id",
-        "msg",
-        "type",
-        "tag",
-        "NORMAL",
-        "REVERSE",
-        "HIGHLIGHT",
+        "accTitle", "accDescr", "commit", "cherry-pick",
+        "branch", "merge", "reset", "checkout",
+        "LR", "BT", "id", "msg", "type", "tag",
+        "NORMAL", "REVERSE", "HIGHLIGHT",
+        // Enhanced git graph keywords
+        "theme", "base", "primaryColor", "primaryTextColor",
+        "primaryBorderColor", "lineColor", "order",
       ],
     },
     pie: {
       typeKeywords: ["pie"],
       blockKeywords: [],
-      keywords: ["title", "showData", "title", "accDescription"],
+      keywords: [
+        "title", "showData", "accDescription",
+        // Enhanced pie chart keywords
+        "showValues", "textPosition",
+      ],
     },
     c4Diagram: {
       typeKeywords: [
-        "C4Context",
-        "C4Container",
-        "C4Component",
-        "C4Dynamic",
-        "C4Deployment",
+        "C4Context", "C4Container", "C4Component", "C4Dynamic", "C4Deployment",
       ],
       blockKeywords: [
-        "Boundary",
-        "Enterprise_Boundary",
-        "System_Boundary",
-        "Container_Boundary",
-        "Node",
-        "Node_L",
-        "Node_R",
+        "Boundary", "Enterprise_Boundary", "System_Boundary", "Container_Boundary",
+        "Node", "Node_L", "Node_R",
       ],
       keywords: [
-        "title",
-        "accDescription",
-        "direction",
-        "TB",
-        "BT",
-        "RL",
-        "LR",
-        "Person_Ext",
-        "Person",
-        "SystemQueue_Ext",
-        "SystemDb_Ext",
-        "System_Ext",
-        "SystemQueue",
-        "SystemDb",
-        "System",
-        "ContainerQueue_Ext",
-        "ContainerDb_Ext",
-        "Container_Ext",
-        "ContainerQueue",
-        "ContainerDb",
-        "Container",
-        "ComponentQueue_Ext",
-        "ComponentDb_Ext",
-        "Component_Ext",
-        "ComponentQueue",
-        "ComponentDb",
-        "Component",
-        "Deployment_Node",
-        "Rel",
-        "BiRel",
-        "Rel_Up",
-        "Rel_U",
-        "Rel_Down",
-        "Rel_D",
-        "Rel_Left",
-        "Rel_L",
-        "Rel_Right",
-        "Rel_R",
-        "Rel_Back",
-        "RelIndex",
+        "title", "accDescription", "direction", "TB", "BT", "RL", "LR",
+        "Person_Ext", "Person", "SystemQueue_Ext", "SystemDb_Ext", "System_Ext",
+        "SystemQueue", "SystemDb", "System", "ContainerQueue_Ext", "ContainerDb_Ext",
+        "Container_Ext", "ContainerQueue", "ContainerDb", "Container",
+        "ComponentQueue_Ext", "ComponentDb_Ext", "Component_Ext",
+        "ComponentQueue", "ComponentDb", "Component", "Deployment_Node",
+        "Rel", "BiRel", "Rel_Up", "Rel_U", "Rel_Down", "Rel_D",
+        "Rel_Left", "Rel_L", "Rel_Right", "Rel_R", "Rel_Back", "RelIndex",
+        // Enhanced C4 diagram keywords
+        "UpdateElementStyle", "UpdateRelStyle", "UpdateLayoutConfig",
+        "SHOW_PERSON_PORTRAIT", "SHOW_PERSON_OUTLINE",
+      ],
+    },
+    // New diagram types support
+    quadrantChart: {
+      typeKeywords: ["quadrantChart"],
+      blockKeywords: [],
+      keywords: [
+        "title", "x-axis", "y-axis", "quadrant-1", "quadrant-2", "quadrant-3", "quadrant-4",
+      ],
+    },
+    xychart: {
+      typeKeywords: ["xychart-beta"],
+      blockKeywords: [],
+      keywords: [
+        "title", "x-axis", "y-axis", "line", "bar",
+      ],
+    },
+    sankey: {
+      typeKeywords: ["sankey-beta"],
+      blockKeywords: [],
+      keywords: [
+        "title", "accDescription",
+      ],
+    },
+    architecture: {
+      typeKeywords: ["architecture-beta"],
+      blockKeywords: ["group"],
+      keywords: [
+        "title", "accDescription", "service", "junction", "left", "right", "top", "bottom",
       ],
     },
   };
 
+  // Enhanced configuration directive handler with better error handling
   const configDirectiveHandler = [
     /^\s*%%(?={)/,
     {
-      token: "string",
+      token: "config.directive",
       next: "@configDirective",
       nextEmbedded: "javascript",
     },
       ] as any;
+
+  // Error handling patterns
+  const errorPatterns = [
+    [/^\s*%%\s*error/i, "custom-error"],
+    [/^\s*%%\s*warning/i, "custom-warning"],
+  ];
 
   // Register the language
   monaco.languages.register({ id: "mermaid" });
@@ -274,29 +240,39 @@ export const configureMermaidLanguage = (monaco: any) => {
       ),
     tokenizer: {
       root: [
-        [/^\s*timeline/, "typeKeyword", "timeline"],
-        [/^\s*mindmap/, "typeKeyword", "mindmap"],
-        [/^\s*gitGraph/m, "typeKeyword", "gitGraph"],
-        [/^\s*info/m, "typeKeyword", "info"],
-        [/^\s*pie/m, "typeKeyword", "pie"],
-        [/^\s*(flowchart|flowchart-v2|graph)/m, "typeKeyword", "flowchart"],
-        [/^\s*sequenceDiagram/, "typeKeyword", "sequenceDiagram"],
-        [/^\s*classDiagram(-v2)?/, "typeKeyword", "classDiagram"],
-        [/^\s*journey/, "typeKeyword", "journey"],
-        [/^\s*gantt/, "typeKeyword", "gantt"],
-        [/^\s*stateDiagram(-v2)?/, "typeKeyword", "stateDiagram"],
-        [/^\s*er(Diagram)?/, "typeKeyword", "erDiagram"],
-        [/^\s*requirement(Diagram)?/, "typeKeyword", "requirementDiagram"],
-        [
-          /^\s*(C4Context|C4Container|C4Component|C4Dynamic|C4Deployment)/m,
-          "typeKeyword",
-          "c4Diagram",
-        ],
+        // Enhanced error handling
+        ...errorPatterns,
+        
+        // Enhanced diagram type detection with better regex patterns
+        [/^\s*timeline\b/, "typeKeyword", "timeline"],
+        [/^\s*mindmap\b/, "typeKeyword", "mindmap"],
+        [/^\s*gitGraph\b/m, "typeKeyword", "gitGraph"],
+        [/^\s*info\b/m, "typeKeyword", "info"],
+        [/^\s*pie\b/m, "typeKeyword", "pie"],
+        [/^\s*(flowchart|flowchart-v2|graph)\b/m, "typeKeyword", "flowchart"],
+        [/^\s*sequenceDiagram\b/, "typeKeyword", "sequenceDiagram"],
+        [/^\s*classDiagram(-v2)?\b/, "typeKeyword", "classDiagram"],
+        [/^\s*journey\b/, "typeKeyword", "journey"],
+        [/^\s*gantt\b/, "typeKeyword", "gantt"],
+        [/^\s*stateDiagram(-v2)?\b/, "typeKeyword", "stateDiagram"],
+        [/^\s*er(Diagram)?\b/, "typeKeyword", "erDiagram"],
+        [/^\s*requirement(Diagram)?\b/, "typeKeyword", "requirementDiagram"],
+        [/^\s*(C4Context|C4Container|C4Component|C4Dynamic|C4Deployment)\b/m, "typeKeyword", "c4Diagram"],
+        
+        // New diagram types
+        [/^\s*quadrantChart\b/, "typeKeyword", "quadrantChart"],
+        [/^\s*xychart-beta\b/, "typeKeyword", "xychart"],
+        [/^\s*sankey-beta\b/, "typeKeyword", "sankey"],
+        [/^\s*architecture-beta\b/, "typeKeyword", "architecture"],
+        
         configDirectiveHandler,
+        
+        // Enhanced comment patterns
         [/%%[^${].*$/, "comment"],
+        [/^\s*#.*$/, "comment"], // Support for # comments in some contexts
       ],
       configDirective: [
-        [/%%$/, { token: "string", next: "@pop", nextEmbedded: "@pop" }],
+        [/%%$/, { token: "config.directive", next: "@pop", nextEmbedded: "@pop" }],
       ],
       timeline: [
         configDirectiveHandler,
@@ -642,6 +618,75 @@ export const configureMermaidLanguage = (monaco: any) => {
         [/,/, "delimiter.bracket"],
         [/\)/, { next: "@pop", token: "delimiter.bracket" }],
         [/[^,)]/, "string"],
+      ],
+      quadrantChart: [
+        configDirectiveHandler,
+        [/(title|x-axis|y-axis)(.*$)/, ["keyword", "string"]],
+        [/(quadrant-[1234])(.*$)/, ["keyword", "string"]],
+        [
+          /[a-zA-Z][\w$]*/,
+          {
+            cases: {
+              "@quadrantChartBlockKeywords": "typeKeyword",
+              "@quadrantChartKeywords": "keyword",
+              "@default": "variable",
+            },
+          },
+        ],
+        [/".*?"/, "string"],
+        [/:/, "delimiter.bracket"],
+        [/%%[^$]([^%]*(?!%%$)%?)*$/, "comment"],
+      ],
+      xychart: [
+        configDirectiveHandler,
+        [/(title|x-axis|y-axis)(.*$)/, ["keyword", "string"]],
+        [
+          /[a-zA-Z][\w$]*/,
+          {
+            cases: {
+              "@xychartBlockKeywords": "typeKeyword", 
+              "@xychartKeywords": "keyword",
+              "@default": "variable",
+            },
+          },
+        ],
+        [/".*?"/, "string"],
+        [/:/, "delimiter.bracket"],
+        [/%%[^$]([^%]*(?!%%$)%?)*$/, "comment"],
+      ],
+      sankey: [
+        configDirectiveHandler,
+        [/(title|accDescription)(.*$)/, ["keyword", "string"]],
+        [
+          /[a-zA-Z][\w$]*/,
+          {
+            cases: {
+              "@sankeyBlockKeywords": "typeKeyword",
+              "@sankeyKeywords": "keyword", 
+              "@default": "variable",
+            },
+          },
+        ],
+        [/".*?"/, "string"],
+        [/:/, "delimiter.bracket"],
+        [/%%[^$]([^%]*(?!%%$)%?)*$/, "comment"],
+      ],
+      architecture: [
+        configDirectiveHandler,
+        [/(title|accDescription)(.*$)/, ["keyword", "string"]],
+        [
+          /[a-zA-Z][\w$]*/,
+          {
+            cases: {
+              "@architectureBlockKeywords": "typeKeyword",
+              "@architectureKeywords": "keyword",
+              "@default": "variable", 
+            },
+          },
+        ],
+        [/".*?"/, "string"],
+        [/:/, "delimiter.bracket"],
+        [/%%[^$]([^%]*(?!%%$)%?)*$/, "comment"],
       ],
     },
   });

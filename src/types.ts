@@ -28,4 +28,23 @@ export interface AIConfig {
   model: string;
   temperature: number;
   maxTokens: number;
+  thinkingBudget?: number;
+  enableGrounding?: boolean;
+  enableUrlContext?: boolean;
+  dynamicRetrievalThreshold?: number;
+}
+
+export interface GroundingMetadata {
+  webSearchQueries?: string[];
+  groundingSources?: Array<{
+    uri: string;
+    snippet: string;
+  }>;
+  citationMetadata?: {
+    citationSources: Array<{
+      startIndex: number;
+      endIndex: number;
+      uri: string;
+    }>;
+  };
 } 

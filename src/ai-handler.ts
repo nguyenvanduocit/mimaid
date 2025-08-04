@@ -1,20 +1,22 @@
 import { createModelContent, createUserContent, GenerateContentParameters, GenerateContentResponse, GoogleGenAI } from "@google/genai";
 import { AI_CONFIG } from "./config";
+import { GroundingMetadata } from "./types";
 
 export class AIHandler {
   private client: GoogleGenAI;
   private editor: any; // Use any since we're dynamically importing Monaco
   private previousPrompt: string;
   private elements: {
-    inputField: HTMLTextAreaElement;
+    inputField: HTMLTextAreaElement | HTMLInputElement;
     inputArea: HTMLDivElement;
     generationStatus: HTMLSpanElement;
   };
+  private groundingMetadata: GroundingMetadata | null = null;
 
   constructor(
     editor: any, // Use any since we're dynamically importing Monaco
     elements: {
-      inputField: HTMLTextAreaElement;
+      inputField: HTMLTextAreaElement | HTMLInputElement;
       inputArea: HTMLDivElement;
       generationStatus: HTMLSpanElement;
     }
@@ -34,15 +36,40 @@ export class AIHandler {
       this.setLoadingState(true);
       const currentCode = this.editor.getValue();
 
-      const systemPrompt = `You are a thoughtful assistant that helps create or edit Mermaid diagram code.
-ALWAYS wrap any code output in \`\`\`mermaid\`\`\` tags.
-Use chain-of-thought reasoning, thinking carefully step by step before responding.`;
+      const systematicPrompt = `You are a Mermaid diagram expert with access to real-time information and web content analysis. Your role is to create, modify, or improve Mermaid diagram code based on user requests.
+
+Core Capabilities:
+- Create any type of Mermaid diagram: flowcharts, sequence, class, state, ER, journey, pie, quadrant, gitgraph, etc.
+- Access current best practices and latest Mermaid documentation through web search
+- Analyze URLs provided by users to extract diagram-worthy information
+- Research real-world examples and industry standards for accurate diagram creation
+
+Guidelines:
+- Always respond with valid Mermaid syntax wrapped in \`\`\`mermaid code blocks
+- When users mention URLs, analyze them to extract relevant structural information
+- For requests about current technologies, standards, or methodologies, use web search to ensure accuracy
+- When modifying existing code, preserve the overall structure unless specifically asked to change it
+- Use descriptive node labels and clear connections based on real-world context
+- Follow the latest Mermaid best practices for readability and maintainability
+
+Enhanced Capabilities:
+- If users ask about specific companies, products, or workflows, search for accurate organizational structures
+- For technical architecture diagrams, reference current industry patterns and standards
+- When creating process flows, verify against real-world implementations when possible
+- For data models, check current database design patterns and conventions
+
+Response format:
+\`\`\`mermaid
+[your mermaid code here]
+\`\`\`
+
+If you need more context or current information to create an accurate diagram, I'll search for it automatically.`;
       
       let contents = [
         createUserContent([
-          systemPrompt
+          systematicPrompt
         ]),
-        createModelContent("Yes, i will create mermaid diagram code for you. Please provide me with the prompt.")
+        createModelContent("I understand. I'm ready to help you create or modify Mermaid diagrams. I'll provide valid Mermaid syntax in code blocks based on your requirements.")
       ]
       
       if (this.previousPrompt) {
@@ -52,20 +79,42 @@ Use chain-of-thought reasoning, thinking carefully step by step before respondin
       }
 
       if (currentCode) {
-        contents.push(createModelContent(currentCode))
+        contents.push(createUserContent([
+          `Current diagram code:\n\`\`\`mermaid\n${currentCode}\n\`\`\``
+        ]))
+        contents.push(createModelContent("I can see the current diagram. How would you like me to modify it?"))
       }
 
       contents.push(createUserContent([
         prompt
       ]))
 
+      // Build tools array based on configuration
+      const tools: any[] = [];
+
+      if (AI_CONFIG.enableUrlContext) {
+        tools.push({ urlContext: {} });
+      }
+
+      if (AI_CONFIG.enableGrounding) {
+        tools.push({ googleSearch: {} });
+      }
+
       const parts: GenerateContentParameters = {
         model: AI_CONFIG.model,
         contents: contents,
         config: {
-          tools: [{urlContext: {}}, {googleSearch: {}}],
+          ...(tools.length > 0 && { tools }),
+          ...(AI_CONFIG.enableGrounding && AI_CONFIG.dynamicRetrievalThreshold && {
+            dynamicRetrieval: {
+              threshold: AI_CONFIG.dynamicRetrievalThreshold
+            }
+          }),
           temperature: AI_CONFIG.temperature,
-          maxOutputTokens: AI_CONFIG.maxTokens
+          maxOutputTokens: AI_CONFIG.maxTokens,
+          thinkingConfig: {
+            thinkingBudget: AI_CONFIG.thinkingBudget || -1
+          }
         },
       }
 
@@ -94,6 +143,12 @@ Use chain-of-thought reasoning, thinking carefully step by step before respondin
     let tempResponse = "";
 
     for await (const chunk of stream) {
+      // Capture grounding metadata if available (check if it exists on the chunk)
+      if ('groundingMetadata' in chunk && chunk.groundingMetadata) {
+        this.groundingMetadata = chunk.groundingMetadata as GroundingMetadata;
+        this.displayGroundingInfo(this.groundingMetadata);
+      }
+
       if (chunk.text) {
         tempResponse += chunk.text;
         
@@ -125,9 +180,35 @@ Use chain-of-thought reasoning, thinking carefully step by step before respondin
     
     this.editor.updateOptions({ readOnly: loading });
     inputField.disabled = loading;
-    inputArea.style.display = loading ? "none" : "block";
+    inputArea.style.display = loading ? "none" : "flex";
     generationStatus.style.display = loading ? "block" : "none";
     generationStatus.textContent = loading ? "AI is generating..." : "";
     inputField.style.opacity = loading ? "0.5" : "1";
+  }
+
+  private displayGroundingInfo(metadata: GroundingMetadata): void {
+
+    // Update status to show grounding was used
+    if (metadata.webSearchQueries?.length || metadata.groundingSources?.length) {
+      const { generationStatus } = this.elements;
+      generationStatus.textContent = "✨ AI is generating with real-time information...";
+    }
+  }
+
+  public getGroundingMetadata(): GroundingMetadata | null {
+    return this.groundingMetadata;
+  }
+
+  public hasGroundingSources(): boolean {
+    return !!(this.groundingMetadata?.groundingSources?.length || this.groundingMetadata?.webSearchQueries?.length);
+  }
+
+  public getSourceUrls(): string[] {
+    return this.groundingMetadata?.groundingSources?.map(source => source.uri) || [];
+  }
+
+  public updateGroundingSettings(_enableGrounding: boolean, _enableUrlContext: boolean, _threshold?: number): void {
+    // This would typically update AI_CONFIG or a local configuration
+    // Implementation would go here when needed
   }
 } 

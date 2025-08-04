@@ -9,7 +9,6 @@ import { EventHelpers } from "./events";
 export class AIHandler {
   private client: GoogleGenAI;
   private editor: any;
-  private previousPrompt: string;
   private elements: {
     inputField: HTMLTextAreaElement | HTMLInputElement;
     inputArea: HTMLDivElement;
@@ -27,8 +26,7 @@ export class AIHandler {
   ) {
     this.editor = editor;
     this.elements = elements;
-    this.client = new GoogleGenAI({apiKey: AI_CONFIG.apiKey});
-    this.previousPrompt = "";
+    this.client = new GoogleGenAI({ apiKey: AI_CONFIG.apiKey });
     
     this.setupEventListeners();
   }
@@ -85,8 +83,6 @@ Please provide the modified Mermaid diagram code.`;
     } finally {
       this.finishGeneration();
     }
-
-    this.previousPrompt = prompt;
   }
 
   /**
@@ -102,14 +98,7 @@ Please provide the modified Mermaid diagram code.`;
    * Build conversation contents for AI generation
    */
   private buildConversationContents(prompt: string, currentCode: string): any[] {
-    const contents = [
-      createUserContent([this.getSystemPrompt()]),
-      createModelContent("I understand. I'm ready to help you create or modify Mermaid diagrams. I'll provide valid Mermaid syntax in code blocks based on your requirements.")
-    ];
-    
-    if (this.previousPrompt) {
-      contents.push(createUserContent([this.previousPrompt]));
-    }
+    const contents = [];
 
     if (currentCode) {
       contents.push(createUserContent([`Current diagram code:\n\`\`\`mermaid\n${currentCode}\n\`\`\``]));
@@ -189,6 +178,9 @@ If you need more context or current information to create an accurate diagram, I
             threshold: AI_CONFIG.dynamicRetrievalThreshold
           }
         }),
+        systemInstruction: {
+          parts: [{ text: this.getSystemPrompt() }]
+        },
         temperature: AI_CONFIG.temperature,
         maxOutputTokens: AI_CONFIG.maxTokens,
         thinkingConfig: {
@@ -206,13 +198,6 @@ If you need more context or current information to create an accurate diagram, I
     const errorMessage = error instanceof Error ? error.message : "Failed to process prompt with AI. Check your API key";
     
     EventHelpers.safeEmit('ai:error', { error: errorMessage });
-    
-    const { generationStatus } = this.elements;
-    generationStatus.style.display = "block";
-    generationStatus.textContent = `❌ ${errorMessage}`;
-    setTimeout(() => {
-      generationStatus.style.display = "none";
-    }, 5000);
   }
 
   /**

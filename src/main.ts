@@ -187,6 +187,12 @@ class MermaidEditor {
     this.editor.onDidChangeModelContent(() => {
       requestAnimationFrame(() => {
         const code = this.editor.getValue();
+        
+        // Clear error state immediately when content becomes empty
+        if (this.isEmptyCode(code)) {
+          this.hideError();
+        }
+        
         debouncedEmitChange(code);
         debouncedGenerateDiagramHash(code);
       });

@@ -244,7 +244,7 @@ export const EDITOR_CONFIG: EditorConfig = {
 
 export const AI_CONFIG: AIConfig = {
   apiKey: localStorage.getItem('googleAiApiKey') || import.meta.env.VITE_GOOGLE_AI_API_KEY,
-  model: 'gemini-2.5-flash-preview-05-20',
+  model: 'gemini-2.5-pro',
   temperature: 1,
   maxTokens: 64000,
 };

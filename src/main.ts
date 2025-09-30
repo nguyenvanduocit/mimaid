@@ -271,8 +271,10 @@ class MermaidEditor {
     const settingsDialog = document.querySelector<HTMLDivElement>("#settings-dialog")!;
     const saveSettingsBtn = document.querySelector<HTMLButtonElement>("#save-settings")!;
     const apiTokenInput = document.querySelector<HTMLInputElement>("#api-token")!;
+    const modelIdInput = document.querySelector<HTMLInputElement>("#model-id")!;
 
     apiTokenInput.value = localStorage.getItem("googleAiApiKey") || "";
+    modelIdInput.value = localStorage.getItem("googleAiModel") || "gemini-2.5-pro";
 
     settingsBtn.addEventListener("click", () => {
       EventHelpers.safeEmit('ui:settings:open', {});
@@ -284,12 +286,15 @@ class MermaidEditor {
 
     saveSettingsBtn.addEventListener("click", () => {
       const apiToken = apiTokenInput.value.trim();
+      const modelId = modelIdInput.value.trim() || "gemini-2.5-pro";
       localStorage.setItem("googleAiApiKey", apiToken);
+      localStorage.setItem("googleAiModel", modelId);
       AI_CONFIG.apiKey = apiToken;
+      AI_CONFIG.model = modelId;
       settingsDialog.classList.add("hidden");
-      
+
       // Emit settings save event
-      EventHelpers.safeEmit('ui:settings:save', { apiKey: apiToken });
+      EventHelpers.safeEmit('ui:settings:save', { apiKey: apiToken, model: modelId });
       
       // Update input area visibility after saving settings
       this.updateInputAreaVisibility();

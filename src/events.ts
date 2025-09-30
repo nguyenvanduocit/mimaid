@@ -25,7 +25,7 @@ export type AppEvents = {
   // UI events
   'ui:preset:select': { preset: Preset; isModification: boolean };
   'ui:settings:open': {};
-  'ui:settings:save': { apiKey: string };
+  'ui:settings:save': { apiKey: string; model: string };
   'ui:zoom': { direction: 'in' | 'out' };
   'ui:input:submit': { prompt: string };
   'ui:fixWithAI': {};

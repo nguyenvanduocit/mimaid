@@ -19,10 +19,14 @@ body {
 .editor-pane {
     flex: 0 0 25%;
     min-width: 0;
-    display: flex;
+    display: none;
     flex-direction: column;
     contain: layout style;
     will-change: flex-basis;
+}
+
+.editor-pane.visible {
+    display: flex;
 }
 
 /* Preview Pane */

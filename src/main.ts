@@ -94,15 +94,20 @@ class MermaidEditor {
     const urlParams = new URLSearchParams(window.location.search);
     const hideEditor = urlParams.has("hideEditor");
 
-    this.setupEditor();
-
-    if (hideEditor) {
-      this.hideEditorPane();
+    if (!hideEditor) {
+      this.showEditorPane();
     }
+
+    this.setupEditor();
+  }
+
+  private showEditorPane(): void {
+    this.elements.editorPane.classList.add("visible");
+    this.elements.handle.style.display = "block";
   }
 
   private hideEditorPane(): void {
-    this.elements.editorPane.style.display = "none";
+    this.elements.editorPane.classList.remove("visible");
     this.elements.handle.style.display = "none";
   }
 

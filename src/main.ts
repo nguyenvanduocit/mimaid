@@ -76,8 +76,6 @@ class MermaidEditor {
       editorPane: document.querySelector(".editor-pane")!,
       handle: document.querySelector(".resize-handle")!,
       errorOverlay: document.querySelector(".error-overlay")!,
-      exportButton: document.querySelector<HTMLButtonElement>("#export-btn")!,
-      exportPngButton: document.querySelector<HTMLButtonElement>("#export-png-btn")!,
       zoomInButton: document.querySelector<HTMLButtonElement>("#zoom-in-btn")!,
       zoomOutButton: document.querySelector<HTMLButtonElement>("#zoom-out-btn")!,
       generationStatus: document.querySelector<HTMLSpanElement>("#generation-status")!
@@ -208,14 +206,6 @@ class MermaidEditor {
     this.setupResizeListeners();
     this.setupInputListeners();
 
-    this.elements.exportButton.addEventListener("click", () => {
-      EventHelpers.safeEmit('diagram:export', { format: 'svg' });
-      this.exportToSvg();
-    });
-    this.elements.exportPngButton.addEventListener("click", () => {
-      EventHelpers.safeEmit('diagram:export', { format: 'png' });
-      this.exportToPng();
-    });
     this.elements.zoomInButton.addEventListener("click", () => {
       EventHelpers.safeEmit('ui:zoom', { direction: 'in' });
       this.handleZoomButtonClick(EDITOR_CONFIG.zoomFactor);
@@ -785,68 +775,6 @@ class MermaidEditor {
       
     } catch (error) {
       console.error('[DEBUG] Error registering AI fix command:', error);
-    }
-  }
-
-  private exportToSvg(): void {
-    const svg = this.elements.mermaidPreview.querySelector("svg");
-    if (!svg) return;
-
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "mermaid-diagram.svg";
-    a.click();
-
-    URL.revokeObjectURL(url);
-  }
-
-  private async exportToPng(): Promise<void> {
-    const svg = this.elements.mermaidPreview.querySelector("svg");
-    if (!svg) return;
-
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const img = new Image();
-    
-    // Create blob URL for better memory management
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
-    
-    try {
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = url;
-      });
-
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      // Set canvas size based on SVG viewBox
-      const viewBox = svg.getAttribute("viewBox")?.split(" ").map(Number);
-      canvas.width = viewBox ? viewBox[2] : parseFloat(svg.getAttribute("width") || "800");
-      canvas.height = viewBox ? viewBox[3] : parseFloat(svg.getAttribute("height") || "600");
-
-      // Use high-quality scaling
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      
-      // Draw image and export
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const pngUrl = canvas.toDataURL("image/png");
-      
-      const a = document.createElement("a");
-      a.href = pngUrl;
-      a.download = "mermaid-diagram.png";
-      a.click();
-    } catch (error) {
-      console.error("Error exporting PNG:", error);
-    } finally {
-      URL.revokeObjectURL(url);
     }
   }
 

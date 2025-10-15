@@ -20,7 +20,6 @@ export type AppEvents = {
   'diagram:render': { code: string };
   'diagram:rendered': { svg: string };
   'diagram:error': { error: string };
-  'diagram:export': { format: 'svg' | 'png' };
   
   // UI events
   'ui:preset:select': { preset: Preset; isModification: boolean };

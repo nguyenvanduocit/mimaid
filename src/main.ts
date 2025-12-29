@@ -92,7 +92,9 @@ class MermaidEditor {
     const urlParams = new URLSearchParams(window.location.search);
     const hideEditor = urlParams.has("hideEditor");
 
-    if (!hideEditor) {
+    if (hideEditor) {
+      this.hideEditorPane();
+    } else {
       this.showEditorPane();
     }
 

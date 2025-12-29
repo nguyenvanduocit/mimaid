@@ -187,14 +187,37 @@ jobs:
 ## Cloudflare Pages
 
 ### Git Integration
+
+**Important:** Cloudflare Pages doesn't natively support Bun. You need to configure it to use npm instead.
+
+#### Build Configuration Settings
+In your Cloudflare Pages dashboard:
+
+1. **Framework preset:** None
+2. **Build command:** `npm install && npm run build`
+3. **Build output directory:** `dist`
+4. **Root directory:** `/` (leave empty)
+5. **Node.js version:** Set environment variable `NODE_VERSION = 18`
+
+#### Environment Variables
+Set these in the Cloudflare Pages dashboard:
+- `NODE_VERSION` = `18`
+- `VITE_GOOGLE_AI_API_KEY` = `your_gemini_api_key`
+- `VITE_LIVEBLOCKS_PUBLIC_API_KEY` = `pk_live_your_liveblocks_key`
+
+#### Alternative: Using npm locally
+If you prefer to use npm for deployment compatibility:
 ```bash
-# Connect repository
-# Set build command: bun run build
-# Set build output directory: dist
-# Set environment variables in dashboard
+# Generate package-lock.json
+npm install --package-lock-only
+
+# Commit the lockfile
+git add package-lock.json
+git commit -m "Add npm lockfile for Cloudflare Pages compatibility"
 ```
 
 ### `wrangler.toml` Configuration
+For Cloudflare Workers deployment (not needed for Pages):
 ```toml
 name = "minimalmermaid"
 compatibility_date = "2023-05-18"
@@ -215,6 +238,10 @@ npm install -g wrangler
 
 # Login
 wrangler login
+
+# Build locally first
+npm install
+npm run build
 
 # Deploy
 wrangler pages publish dist

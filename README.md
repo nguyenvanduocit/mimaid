@@ -76,6 +76,18 @@ To share a view-only version of your diagram:
 - Click the "SVG" button to export as SVG
 - Click the "PNG" button to export as PNG
 
+## Deployment
+
+### Cloudflare Pages
+
+To deploy on Cloudflare Pages, configure the following settings in your dashboard:
+
+- **Build command:** `npm install && npm run build`
+- **Build output directory:** `dist`
+- **Environment variable:** `NODE_VERSION = 18`
+
+Note: Cloudflare Pages doesn't natively support Bun, so use npm for builds. See [docs/deployment.md](docs/deployment.md) for detailed deployment instructions for various platforms.
+
 ## Technology Stack
 
 The project uses several key technologies:

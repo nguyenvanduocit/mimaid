@@ -108,6 +108,24 @@
           <div id="mermaid-preview"></div>
           <pre class="error-overlay"></pre>
           <div class="floating-controls">
+            <button id="share-btn" class="button share-button" title="Share">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+              </svg>
+            </button>
             <button id="claude-skill-btn" class="button skill-button" title="Get Claude Skill">
               <svg
                 width="16"
@@ -170,6 +188,64 @@
               </div>
               <div class="skill-modal-hint">
                 <small>Place in <code>~/.claude/skills/mimaid/SKILL.md</code></small>
+              </div>
+            </div>
+          </div>
+
+          <div id="share-modal" class="share-modal hidden">
+            <div class="share-modal-content">
+              <div class="share-modal-header">
+                <h3>Share Diagram</h3>
+                <button id="share-modal-close" class="share-modal-close">&times;</button>
+              </div>
+              <div class="share-modal-actions">
+                <button id="copy-link-btn" class="share-action-btn primary">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                  Copy Link
+                </button>
+                <button id="copy-collab-btn" class="share-action-btn">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                  Collaborate
+                </button>
+                <button id="copy-embed-btn" class="share-action-btn">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <polyline points="16 18 22 12 16 6" />
+                    <polyline points="8 6 2 12 8 18" />
+                  </svg>
+                  Embed URL
+                </button>
+              </div>
+              <div id="share-url-preview" class="share-url-preview hidden">
+                <input type="text" id="share-url-input" readonly />
               </div>
             </div>
           </div>

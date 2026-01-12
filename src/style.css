@@ -873,6 +873,152 @@ body {
 }
 
 /* ==========================================================================
+   Share Modal
+   ========================================================================== */
+
+.share-button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--color-lavender);
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-soft);
+  transition: background var(--transition-fast);
+}
+
+.share-button:hover {
+  background: #b8a0d8;
+}
+
+.share-modal {
+  position: fixed;
+  bottom: 84px;
+  right: 28px;
+  z-index: 1000;
+  animation: slideUp 0.25s ease-out;
+}
+
+.share-modal.hidden {
+  display: none;
+}
+
+.share-modal-content {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-medium);
+  padding: 24px;
+  width: 320px;
+  border: 1px solid rgba(143, 179, 143, 0.2);
+}
+
+.share-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.share-modal-header h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.share-modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color var(--transition-fast);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.share-modal-close:hover {
+  color: var(--color-text);
+  background: var(--color-sage-light);
+}
+
+.share-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.share-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--color-sage-light);
+  border-radius: var(--radius-sm);
+  background: white;
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.share-action-btn:hover {
+  background: var(--color-bg-warm);
+}
+
+.share-action-btn.primary {
+  background: var(--color-sage);
+  border: none;
+  color: white;
+}
+
+.share-action-btn.primary:hover {
+  background: var(--color-sage-dark);
+}
+
+.share-action-btn.success {
+  background: var(--color-sage);
+  border-color: var(--color-sage);
+  color: white;
+}
+
+.share-url-preview {
+  margin-top: 16px;
+}
+
+.share-url-preview.hidden {
+  display: none;
+}
+
+.share-url-preview input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-sage-light);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+  background: var(--color-bg);
+  box-sizing: border-box;
+}
+
+.share-url-preview input:focus {
+  outline: none;
+  border-color: var(--color-sage);
+}
+
+/* ==========================================================================
    Responsive Design
    ========================================================================== */
 

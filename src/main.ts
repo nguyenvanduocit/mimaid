@@ -235,6 +235,7 @@ class MermaidEditor {
     });
     this.setupSettingsListeners();
     this.setupSkillModalListeners();
+    this.setupShareModalListeners();
   }
 
   private setupAppEventListeners(): void {
@@ -1386,6 +1387,9 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     // Toggle skill modal
     skillBtn.addEventListener("click", (e) => {
       e.stopPropagation();
+      // Close share modal if open
+      const shareModal = document.querySelector<HTMLDivElement>("#share-modal");
+      shareModal?.classList.add("hidden");
       skillModal.classList.toggle("hidden");
     });
 
@@ -1452,6 +1456,115 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && !skillModal.classList.contains("hidden")) {
         skillModal.classList.add("hidden");
+      }
+    });
+  }
+
+  private setupShareModalListeners(): void {
+    const shareBtn = document.querySelector<HTMLButtonElement>("#share-btn");
+    const shareModal = document.querySelector<HTMLDivElement>("#share-modal");
+    const shareModalClose = document.querySelector<HTMLButtonElement>("#share-modal-close");
+    const copyLinkBtn = document.querySelector<HTMLButtonElement>("#copy-link-btn");
+    const copyCollabBtn = document.querySelector<HTMLButtonElement>("#copy-collab-btn");
+    const copyEmbedBtn = document.querySelector<HTMLButtonElement>("#copy-embed-btn");
+    const shareUrlPreview = document.querySelector<HTMLDivElement>("#share-url-preview");
+    const shareUrlInput = document.querySelector<HTMLInputElement>("#share-url-input");
+
+    if (!shareBtn || !shareModal) return;
+
+    // Toggle share modal
+    shareBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      // Close skill modal if open
+      const skillModal = document.querySelector<HTMLDivElement>("#skill-modal");
+      skillModal?.classList.add("hidden");
+      shareModal.classList.toggle("hidden");
+      shareUrlPreview?.classList.add("hidden");
+    });
+
+    // Close modal
+    shareModalClose?.addEventListener("click", () => {
+      shareModal.classList.add("hidden");
+    });
+
+    // Generate random room ID
+    const generateRoomId = () => {
+      return Math.random().toString(36).substring(2, 10);
+    };
+
+    // Copy URL and show success state
+    const copyAndShowSuccess = async (url: string, button: HTMLButtonElement) => {
+      await navigator.clipboard.writeText(url);
+
+      // Show URL preview
+      if (shareUrlPreview && shareUrlInput) {
+        shareUrlInput.value = url;
+        shareUrlPreview.classList.remove("hidden");
+        shareUrlInput.select();
+      }
+
+      // Show success state
+      const originalHTML = button.innerHTML;
+      const svgCheck = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svgCheck.setAttribute("width", "16");
+      svgCheck.setAttribute("height", "16");
+      svgCheck.setAttribute("viewBox", "0 0 24 24");
+      svgCheck.setAttribute("fill", "none");
+      svgCheck.setAttribute("stroke", "currentColor");
+      svgCheck.setAttribute("stroke-width", "2");
+      const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      polyline.setAttribute("points", "20 6 9 17 4 12");
+      svgCheck.appendChild(polyline);
+
+      button.textContent = "";
+      button.appendChild(svgCheck);
+      button.appendChild(document.createTextNode(" Copied!"));
+      button.classList.add("success");
+
+      setTimeout(() => {
+        button.innerHTML = originalHTML;
+        button.classList.remove("success");
+      }, 2000);
+    };
+
+    // Copy current link
+    copyLinkBtn?.addEventListener("click", async () => {
+      const url = window.location.href;
+      await copyAndShowSuccess(url, copyLinkBtn);
+    });
+
+    // Copy collaboration link
+    copyCollabBtn?.addEventListener("click", async () => {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const hash = window.location.hash;
+      const roomId = generateRoomId();
+      const collabUrl = `${baseUrl}?room=${roomId}${hash}`;
+      await copyAndShowSuccess(collabUrl, copyCollabBtn);
+    });
+
+    // Copy embed link
+    copyEmbedBtn?.addEventListener("click", async () => {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const hash = window.location.hash;
+      const embedUrl = `${baseUrl}?hideEditor${hash}`;
+      await copyAndShowSuccess(embedUrl, copyEmbedBtn);
+    });
+
+    // Close modal when clicking outside
+    document.addEventListener("click", (e) => {
+      if (
+        !shareModal.contains(e.target as Node) &&
+        !shareBtn.contains(e.target as Node) &&
+        !shareModal.classList.contains("hidden")
+      ) {
+        shareModal.classList.add("hidden");
+      }
+    });
+
+    // Close on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !shareModal.classList.contains("hidden")) {
+        shareModal.classList.add("hidden");
       }
     });
   }

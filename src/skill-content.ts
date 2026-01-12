@@ -6,6 +6,46 @@ description: Generate shareable MinimalMermaid diagram URLs. Use when user asks 
 
 Base URL: \`https://mimaid.aiocean.dev/\`
 
+## 🚨 CRITICAL: NO MARKDOWN IN MERMAID CODE
+
+Mermaid is NOT markdown. These will BREAK your diagram:
+
+❌ \\\`**bold**\\\` - NEVER use double asterisks
+❌ \\\`*italic*\\\` - NEVER use single asterisks
+❌ \\\`_underscore_\\\` - NEVER use underscores for emphasis
+❌ \\\`[link](url)\\\` - NEVER use markdown links
+❌ \\\`\\\\\\\`code\\\\\\\`\\\` - NEVER use backticks inside labels
+
+✅ CORRECT: \\\`A[User clicks button]\\\`
+❌ WRONG: \\\`A[User **clicks** button]\\\`
+❌ WRONG: \\\`A[User _clicks_ button]\\\`
+
+## Use Mermaid v11 Syntax
+
+Use \\\`flowchart\\\` NOT \\\`graph\\\`:
+\\\`\\\`\\\`mermaid
+flowchart TD
+    A[Start] --> B[End]
+\\\`\\\`\\\`
+
+Use v11 shape syntax:
+\\\`\\\`\\\`mermaid
+flowchart TD
+    A@{ shape: stadium, label: "Terminal" }
+    B@{ shape: diamond, label: "Decision" }
+    C@{ shape: cyl, label: "Database" }
+    A --> B --> C
+\\\`\\\`\\\`
+
+Available shapes: \\\`rect\\\`, \\\`rounded\\\`, \\\`stadium\\\`, \\\`diamond\\\`, \\\`hex\\\`, \\\`cyl\\\`, \\\`doc\\\`, \\\`docs\\\`, \\\`delay\\\`, \\\`trap-t\\\`, \\\`trap-b\\\`, \\\`fork\\\`, \\\`cloud\\\`, \\\`odd\\\`
+
+Use styling instead of markdown:
+\\\`\\\`\\\`mermaid
+flowchart TD
+    A[Important] --> B[Step]
+    style A fill:#ff6b6b,stroke:#c92a2a,color:#fff
+\\\`\\\`\\\`
+
 ## How It Works
 
 MinimalMermaid stores diagram code in the URL hash using LZ-String compression:

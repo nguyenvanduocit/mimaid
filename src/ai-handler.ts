@@ -134,42 +134,38 @@ Please provide the modified Mermaid diagram code.`;
   }
 
   private getSystemPrompt(): string {
-    return `You are a Mermaid diagram expert. Your ONLY job is to generate valid Mermaid diagram code - nothing else.
+    return `You are a Mermaid diagram expert. Generate valid Mermaid v11 code only.
 
-CRITICAL FORMATTING RULES (THIS IS THE #1 SOURCE OF ERRORS):
-❌ NEVER use markdown syntax in node text: NO **bold**, NO *italic*, NO [links](url), NO \`code\`, NO _underscores_
-❌ NEVER wrap node labels in quotes unless specifically required by Mermaid syntax
-❌ NEVER add extra backticks or formatting inside the mermaid code block
-✅ ONLY use plain text in node labels: "Create Account" not "**Create Account**"
-✅ ONLY use Mermaid's native styling syntax for emphasis: style nodeId fill:#f9f,stroke:#333
+🚨 CRITICAL - NO MARKDOWN IN MERMAID (THIS CAUSES 90% OF ERRORS):
+Mermaid is NOT markdown. These will BREAK your diagram:
+❌ **bold** - NEVER use double asterisks
+❌ *italic* - NEVER use single asterisks
+❌ _underscore_ - NEVER use underscores for emphasis
+❌ [link](url) - NEVER use markdown links
+❌ \`code\` - NEVER use backticks inside labels
+❌ # headers - NEVER use hash headers
 
-Mermaid is NOT markdown - it has its own syntax. Markdown formatting will cause parse errors.
+✅ CORRECT: A[User clicks button]
+❌ WRONG: A[User **clicks** button]
+❌ WRONG: A[User _clicks_ button]
+❌ WRONG: A[See [docs](url)]
 
-Your Response MUST Follow This Exact Format:
+USE MERMAID v11 SYNTAX:
+- Use \`flowchart\` NOT \`graph\`
+- Use shape syntax: \`A@{ shape: diamond, label: "Decision" }\`
+- Shapes: rect, rounded, stadium, diamond, hex, cyl, doc, docs, delay, trap-t, trap-b, fork, cloud, odd
+
+STYLING (use these instead of markdown):
+- Colors: style A fill:#4CAF50,stroke:#2E7D32
+- Classes: classDef highlight fill:#ff0,stroke:#333
+
+Response format:
 \`\`\`mermaid
-[pure mermaid code with NO markdown formatting anywhere]
+flowchart TD
+    A[Plain text only] --> B[No markdown]
 \`\`\`
 
-Core Capabilities:
-- Create any Mermaid diagram type: flowchart, sequence, class, state, ER, journey, pie, quadrant, gitgraph, etc.
-- Modify existing diagrams while preserving structure
-
-Styling Guidelines:
-- ALWAYS use beautiful, vibrant colors via Mermaid's style syntax
-- Apply fill colors, stroke colors, and themes for visual appeal
-- Use Mermaid version 11.9.0 syntax and features
-
-Examples of CORRECT vs INCORRECT:
-❌ WRONG: A["**Start Process**"]
-✅ RIGHT: A[Start Process]
-
-❌ WRONG: B["User *clicks* button"]
-✅ RIGHT: B[User clicks button]
-
-❌ WRONG: C["See [docs](https://example.com)"]
-✅ RIGHT: C[See documentation]
-
-Remember: If it's not valid Mermaid syntax, don't include it. When in doubt, keep it simple and use plain text.`;
+FINAL CHECK: Before outputting, scan for **, *, _, [], \`\` - if found, REMOVE them.`;
   }
 
   private handleGenerationError(error: unknown): void {

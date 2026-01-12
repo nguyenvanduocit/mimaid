@@ -19,80 +19,158 @@ export const configureMermaidLanguage = (monaco: any) => {
     mindmap: {
       typeKeywords: ["mindmap"],
       blockKeywords: [],
-      keywords: [
-        "square",
-        "square_box",
-        "round",
-        "circle",
-        "cloud",
-        "bang",
-        "hexagon",
-        "default",
-      ],
+      keywords: ["square", "square_box", "round", "circle", "cloud", "bang", "hexagon", "default"],
     },
     flowchart: {
       typeKeywords: ["flowchart", "flowchart-v2", "graph"],
       blockKeywords: ["subgraph", "end"],
       keywords: [
-        "TB", "TD", "BT", "RL", "LR",
-        "click", "call", "href",
-        "_self", "_blank", "_parent", "_top",
-        "linkStyle", "style", "classDef", "class",
-        "direction", "interpolate",
+        "TB",
+        "TD",
+        "BT",
+        "RL",
+        "LR",
+        "click",
+        "call",
+        "href",
+        "_self",
+        "_blank",
+        "_parent",
+        "_top",
+        "linkStyle",
+        "style",
+        "classDef",
+        "class",
+        "direction",
+        "interpolate",
         // Enhanced with more flowchart keywords
-        "fill", "stroke", "stroke-width", "stroke-dasharray",
-        "color", "background", "border", "border-radius",
-        "font-size", "font-family", "font-weight",
+        "fill",
+        "stroke",
+        "stroke-width",
+        "stroke-dasharray",
+        "color",
+        "background",
+        "border",
+        "border-radius",
+        "font-size",
+        "font-family",
+        "font-weight",
       ],
     },
     sequenceDiagram: {
       typeKeywords: ["sequenceDiagram"],
       blockKeywords: [
-        "alt", "par", "and", "loop", "else", "end", 
-        "rect", "opt", "break", "critical", "ignore",
+        "alt",
+        "par",
+        "and",
+        "loop",
+        "else",
+        "end",
+        "rect",
+        "opt",
+        "break",
+        "critical",
+        "ignore",
       ],
       keywords: [
-        "participant", "actor", "as",
-        "Note", "note", "right of", "left of", "over",
-        "activate", "deactivate", "destroy",
-        "autonumber", "title", "accDescription",
-        "link", "links", "properties",
+        "participant",
+        "actor",
+        "as",
+        "Note",
+        "note",
+        "right of",
+        "left of",
+        "over",
+        "activate",
+        "deactivate",
+        "destroy",
+        "autonumber",
+        "title",
+        "accDescription",
+        "link",
+        "links",
+        "properties",
         // Enhanced sequence diagram keywords
-        "box", "rgba", "rgb", "transparent",
+        "box",
+        "rgba",
+        "rgb",
+        "transparent",
       ],
     },
     classDiagram: {
       typeKeywords: ["classDiagram", "classDiagram-v2"],
       blockKeywords: ["class", "namespace"],
       keywords: [
-        "link", "click", "callback", "call", "href",
-        "cssClass", "direction", "TB", "BT", "RL", "LR",
-        "title", "accDescription", "order",
+        "link",
+        "click",
+        "callback",
+        "call",
+        "href",
+        "cssClass",
+        "direction",
+        "TB",
+        "BT",
+        "RL",
+        "LR",
+        "title",
+        "accDescription",
+        "order",
         // Enhanced class diagram keywords
-        "interface", "abstract", "enum", "annotation",
-        "public", "private", "protected", "internal",
-        "static", "final", "abstract",
+        "interface",
+        "abstract",
+        "enum",
+        "annotation",
+        "public",
+        "private",
+        "protected",
+        "internal",
+        "static",
+        "final",
+        "abstract",
       ],
     },
     stateDiagram: {
       typeKeywords: ["stateDiagram", "stateDiagram-v2"],
       blockKeywords: ["state", "note", "end"],
       keywords: [
-        "state", "as", "hide empty description",
-        "direction", "TB", "BT", "RL", "LR",
+        "state",
+        "as",
+        "hide empty description",
+        "direction",
+        "TB",
+        "BT",
+        "RL",
+        "LR",
         // Enhanced state diagram keywords
-        "fork", "join", "choice", "concurrent",
+        "fork",
+        "join",
+        "choice",
+        "concurrent",
       ],
     },
     erDiagram: {
       typeKeywords: ["erDiagram"],
       blockKeywords: [],
       keywords: [
-        "title", "accDescription",
+        "title",
+        "accDescription",
         // Enhanced ER diagram keywords
-        "PK", "FK", "UK", "int", "string", "varchar", "char",
-        "date", "datetime", "boolean", "decimal", "float",
-        "one", "zero-or-one", "one-or-more", "zero-or-more",
+        "PK",
+        "FK",
+        "UK",
+        "int",
+        "string",
+        "varchar",
+        "char",
+        "date",
+        "datetime",
+        "boolean",
+        "decimal",
+        "float",
+        "one",
+        "zero-or-one",
+        "one-or-more",
+        "zero-or-more",
       ],
     },
     journey: {
@@ -109,12 +187,26 @@ export const configureMermaidLanguage = (monaco: any) => {
       typeKeywords: ["gantt"],
       blockKeywords: [],
       keywords: [
-        "title", "dateFormat", "axisFormat", "todayMarker",
-        "section", "excludes", "inclusiveEndDates",
+        "title",
+        "dateFormat",
+        "axisFormat",
+        "todayMarker",
+        "section",
+        "excludes",
+        "inclusiveEndDates",
         // Enhanced Gantt keywords
-        "weekday", "monday", "tuesday", "wednesday", "thursday",
-        "friday", "saturday", "sunday",
-        "done", "active", "milestone", "crit",
+        "weekday",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+        "done",
+        "active",
+        "milestone",
+        "crit",
       ],
     },
     requirementDiagram: {
@@ -122,52 +214,121 @@ export const configureMermaidLanguage = (monaco: any) => {
       blockKeywords: requirementDiagrams.concat("element"),
       keywords: [
         // Enhanced requirement diagram keywords
-        "id", "text", "risk", "verifymethod", "type",
-        "low", "medium", "high", "analysis", "test", "inspection", "demonstration",
+        "id",
+        "text",
+        "risk",
+        "verifymethod",
+        "type",
+        "low",
+        "medium",
+        "high",
+        "analysis",
+        "test",
+        "inspection",
+        "demonstration",
       ],
     },
     gitGraph: {
       typeKeywords: ["gitGraph"],
       blockKeywords: [],
       keywords: [
-        "accTitle", "accDescr", "commit", "cherry-pick",
-        "branch", "merge", "reset", "checkout",
-        "LR", "BT", "id", "msg", "type", "tag",
-        "NORMAL", "REVERSE", "HIGHLIGHT",
+        "accTitle",
+        "accDescr",
+        "commit",
+        "cherry-pick",
+        "branch",
+        "merge",
+        "reset",
+        "checkout",
+        "LR",
+        "BT",
+        "id",
+        "msg",
+        "type",
+        "tag",
+        "NORMAL",
+        "REVERSE",
+        "HIGHLIGHT",
         // Enhanced git graph keywords
-        "theme", "base", "primaryColor", "primaryTextColor",
-        "primaryBorderColor", "lineColor", "order",
+        "theme",
+        "base",
+        "primaryColor",
+        "primaryTextColor",
+        "primaryBorderColor",
+        "lineColor",
+        "order",
       ],
     },
     pie: {
       typeKeywords: ["pie"],
       blockKeywords: [],
       keywords: [
-        "title", "showData", "accDescription",
+        "title",
+        "showData",
+        "accDescription",
         // Enhanced pie chart keywords
-        "showValues", "textPosition",
+        "showValues",
+        "textPosition",
       ],
     },
     c4Diagram: {
-      typeKeywords: [
-        "C4Context", "C4Container", "C4Component", "C4Dynamic", "C4Deployment",
-      ],
+      typeKeywords: ["C4Context", "C4Container", "C4Component", "C4Dynamic", "C4Deployment"],
       blockKeywords: [
-        "Boundary", "Enterprise_Boundary", "System_Boundary", "Container_Boundary",
-        "Node", "Node_L", "Node_R",
+        "Boundary",
+        "Enterprise_Boundary",
+        "System_Boundary",
+        "Container_Boundary",
+        "Node",
+        "Node_L",
+        "Node_R",
       ],
       keywords: [
-        "title", "accDescription", "direction", "TB", "BT", "RL", "LR",
-        "Person_Ext", "Person", "SystemQueue_Ext", "SystemDb_Ext", "System_Ext",
-        "SystemQueue", "SystemDb", "System", "ContainerQueue_Ext", "ContainerDb_Ext",
-        "Container_Ext", "ContainerQueue", "ContainerDb", "Container",
-        "ComponentQueue_Ext", "ComponentDb_Ext", "Component_Ext",
-        "ComponentQueue", "ComponentDb", "Component", "Deployment_Node",
-        "Rel", "BiRel", "Rel_Up", "Rel_U", "Rel_Down", "Rel_D",
-        "Rel_Left", "Rel_L", "Rel_Right", "Rel_R", "Rel_Back", "RelIndex",
+        "title",
+        "accDescription",
+        "direction",
+        "TB",
+        "BT",
+        "RL",
+        "LR",
+        "Person_Ext",
+        "Person",
+        "SystemQueue_Ext",
+        "SystemDb_Ext",
+        "System_Ext",
+        "SystemQueue",
+        "SystemDb",
+        "System",
+        "ContainerQueue_Ext",
+        "ContainerDb_Ext",
+        "Container_Ext",
+        "ContainerQueue",
+        "ContainerDb",
+        "Container",
+        "ComponentQueue_Ext",
+        "ComponentDb_Ext",
+        "Component_Ext",
+        "ComponentQueue",
+        "ComponentDb",
+        "Component",
+        "Deployment_Node",
+        "Rel",
+        "BiRel",
+        "Rel_Up",
+        "Rel_U",
+        "Rel_Down",
+        "Rel_D",
+        "Rel_Left",
+        "Rel_L",
+        "Rel_Right",
+        "Rel_R",
+        "Rel_Back",
+        "RelIndex",
         // Enhanced C4 diagram keywords
-        "UpdateElementStyle", "UpdateRelStyle", "UpdateLayoutConfig",
-        "SHOW_PERSON_PORTRAIT", "SHOW_PERSON_OUTLINE",
+        "UpdateElementStyle",
+        "UpdateRelStyle",
+        "UpdateLayoutConfig",
+        "SHOW_PERSON_PORTRAIT",
+        "SHOW_PERSON_OUTLINE",
       ],
     },
     // New diagram types support
@@ -175,28 +336,37 @@ export const configureMermaidLanguage = (monaco: any) => {
       typeKeywords: ["quadrantChart"],
       blockKeywords: [],
       keywords: [
-        "title", "x-axis", "y-axis", "quadrant-1", "quadrant-2", "quadrant-3", "quadrant-4",
+        "title",
+        "x-axis",
+        "y-axis",
+        "quadrant-1",
+        "quadrant-2",
+        "quadrant-3",
+        "quadrant-4",
       ],
     },
     xychart: {
       typeKeywords: ["xychart-beta"],
       blockKeywords: [],
-      keywords: [
-        "title", "x-axis", "y-axis", "line", "bar",
-      ],
+      keywords: ["title", "x-axis", "y-axis", "line", "bar"],
     },
     sankey: {
       typeKeywords: ["sankey-beta"],
       blockKeywords: [],
-      keywords: [
-        "title", "accDescription",
-      ],
+      keywords: ["title", "accDescription"],
     },
     architecture: {
       typeKeywords: ["architecture-beta"],
       blockKeywords: ["group"],
       keywords: [
-        "title", "accDescription", "service", "junction", "left", "right", "top", "bottom",
+        "title",
+        "accDescription",
+        "service",
+        "junction",
+        "left",
+        "right",
+        "top",
+        "bottom",
       ],
     },
   };
@@ -209,7 +379,7 @@ export const configureMermaidLanguage = (monaco: any) => {
       next: "@configDirective",
       nextEmbedded: "javascript",
     },
-      ] as any;
+  ] as any;
 
   // Error handling patterns
   const errorPatterns = [
@@ -228,21 +398,21 @@ export const configureMermaidLanguage = (monaco: any) => {
           Object.entries(entry[1]).map((deepEntry) => [
             entry[0] + deepEntry[0][0].toUpperCase() + deepEntry[0].slice(1),
             deepEntry[1],
-          ])
-        )
+          ]),
+        ),
       )
       .reduce(
         (overallKeywords, nextKeyword) => ({
           ...overallKeywords,
           ...nextKeyword,
         }),
-        {}
+        {},
       ),
     tokenizer: {
       root: [
         // Enhanced error handling
         ...errorPatterns,
-        
+
         // Enhanced diagram type detection with better regex patterns
         [/^\s*timeline\b/, "typeKeyword", "timeline"],
         [/^\s*mindmap\b/, "typeKeyword", "mindmap"],
@@ -257,23 +427,25 @@ export const configureMermaidLanguage = (monaco: any) => {
         [/^\s*stateDiagram(-v2)?\b/, "typeKeyword", "stateDiagram"],
         [/^\s*er(Diagram)?\b/, "typeKeyword", "erDiagram"],
         [/^\s*requirement(Diagram)?\b/, "typeKeyword", "requirementDiagram"],
-        [/^\s*(C4Context|C4Container|C4Component|C4Dynamic|C4Deployment)\b/m, "typeKeyword", "c4Diagram"],
-        
+        [
+          /^\s*(C4Context|C4Container|C4Component|C4Dynamic|C4Deployment)\b/m,
+          "typeKeyword",
+          "c4Diagram",
+        ],
+
         // New diagram types
         [/^\s*quadrantChart\b/, "typeKeyword", "quadrantChart"],
         [/^\s*xychart-beta\b/, "typeKeyword", "xychart"],
         [/^\s*sankey-beta\b/, "typeKeyword", "sankey"],
         [/^\s*architecture-beta\b/, "typeKeyword", "architecture"],
-        
+
         configDirectiveHandler,
-        
+
         // Enhanced comment patterns
         [/%%[^${].*$/, "comment"],
         [/^\s*#.*$/, "comment"], // Support for # comments in some contexts
       ],
-      configDirective: [
-        [/%%$/, { token: "config.directive", next: "@pop", nextEmbedded: "@pop" }],
-      ],
+      configDirective: [[/%%$/, { token: "config.directive", next: "@pop", nextEmbedded: "@pop" }]],
       timeline: [
         configDirectiveHandler,
         [/(title)(.*)/, ["keyword", "string"]],
@@ -312,10 +484,7 @@ export const configureMermaidLanguage = (monaco: any) => {
       gitGraph: [
         configDirectiveHandler,
         [/option(?=s)/, { token: "typeKeyword", next: "optionsGitGraph" }],
-        [
-          /(accTitle|accDescr)(\s*:)(\s*[^\r\n]+$)/,
-          ["keyword", "delimiter.bracket", "string"],
-        ],
+        [/(accTitle|accDescr)(\s*:)(\s*[^\r\n]+$)/, ["keyword", "delimiter.bracket", "string"]],
         [
           /(^\s*branch)(.*?)(\s+order)(:\s*)(\d+\s*$)/,
           ["keyword", "variable", "keyword", "delimiter.bracket", "number"],
@@ -394,10 +563,7 @@ export const configureMermaidLanguage = (monaco: any) => {
         [/{+.+?}+/, "string"],
         [/\(+.+?\)+/, "string"],
         [/-\.+->?/, "transition"],
-        [
-          /(-[-.])([^->][^-]+?)(-{3,}|-{2,}>|\.-+>)/,
-          ["transition", "string", "transition"],
-        ],
+        [/(-[-.])([^->][^-]+?)(-{3,}|-{2,}>|\.-+>)/, ["transition", "string", "transition"]],
         [/(==+)([^=]+?)(={3,}|={2,}>)/, ["transition", "string", "transition"]],
         [/<?(--+|==+)>|===+|---+/, "transition"],
         [/:::/, "transition"],
@@ -409,21 +575,11 @@ export const configureMermaidLanguage = (monaco: any) => {
         configDirectiveHandler,
         [/(title:?|accDescription)([^\r\n;]*$)/, ["keyword", "string"]],
         [/(autonumber)([^\r\n\S]+off[^\r\n\S]*$)/, ["keyword", "keyword"]],
-        [
-          /(autonumber)([^\r\n\S]+\d+[^\r\n\S]+\d+[^\r\n\S]*$)/,
-          ["keyword", "number"],
-        ],
+        [/(autonumber)([^\r\n\S]+\d+[^\r\n\S]+\d+[^\r\n\S]*$)/, ["keyword", "number"]],
         [/(autonumber)([^\r\n\S]+\d+[^\r\n\S]*$)/, ["keyword", "number"]],
         [
           /(link\s+)(.*?)(:)(\s*.*?)(\s*@)(\s*[^\r\n;]+)/,
-          [
-            "keyword",
-            "variable",
-            "delimiter.bracket",
-            "string",
-            "delimiter.bracket",
-            "string",
-          ],
+          ["keyword", "variable", "delimiter.bracket", "string", "delimiter.bracket", "string"],
         ],
         [
           /((?:links|properties)\s+)([^\r\n:]*?)(:\s+)/,
@@ -452,24 +608,14 @@ export const configureMermaidLanguage = (monaco: any) => {
         [/%%[^$]([^%]*(?!%%$)%?)*$/, "comment"],
       ],
       sequenceDiagramLinksProps: [
-        [
-          /$|;/,
-          { nextEmbedded: "@pop", next: "@pop", token: "delimiter.bracket" },
-        ],
+        [/$|;/, { nextEmbedded: "@pop", next: "@pop", token: "delimiter.bracket" }],
       ],
       classDiagram: [
         configDirectiveHandler,
         [/(^\s*(?:title|accDescription))(\s+.*$)/, ["keyword", "string"]],
         [
           /(\*|<\|?|o|)(--|\.\.)(\*|\|?>|o|)([ \t]*[a-zA-Z]+[ \t]*)(:)(.*?$)/,
-          [
-            "transition",
-            "transition",
-            "transition",
-            "variable",
-            "delimiter.bracket",
-            "string",
-          ],
+          ["transition", "transition", "transition", "variable", "delimiter.bracket", "string"],
         ],
         [/(?!class\s)([a-zA-Z]+)(\s+[a-zA-Z]+)/, ["type", "variable"]],
         [/(\*|<\|?|o)?(--|\.\.)(\*|\|?>|o)?/, "transition"],
@@ -485,10 +631,7 @@ export const configureMermaidLanguage = (monaco: any) => {
           },
         ],
         [/%%[^$]([^%]*(?!%%$)%?)*$/, "comment"],
-        [
-          /(<<)(.+?)(>>)/,
-          ["delimiter.bracket", "annotation", "delimiter.bracket"],
-        ],
+        [/(<<)(.+?)(>>)/, ["delimiter.bracket", "annotation", "delimiter.bracket"]],
         [/".*?"/, "string"],
         [/:::/, "transition"],
         [/:|\+|-|#|~|\*\s*$|\$\s*$|\(|\)|{|}/, "delimiter.bracket"],
@@ -545,10 +688,7 @@ export const configureMermaidLanguage = (monaco: any) => {
         ["hide empty description", "keyword"],
         [/^\s*state\s(?!.*\{)/, "keyword"],
         [/(<<)(fork|join|choice)(>>)/, "annotation"],
-        [
-          /(\[\[)(fork|join|choice)(]])/,
-          ["delimiter.bracket", "annotation", "delimiter.bracket"],
-        ],
+        [/(\[\[)(fork|join|choice)(]])/, ["delimiter.bracket", "annotation", "delimiter.bracket"]],
         [
           /[a-zA-Z][\w$]*/,
           {
@@ -644,7 +784,7 @@ export const configureMermaidLanguage = (monaco: any) => {
           /[a-zA-Z][\w$]*/,
           {
             cases: {
-              "@xychartBlockKeywords": "typeKeyword", 
+              "@xychartBlockKeywords": "typeKeyword",
               "@xychartKeywords": "keyword",
               "@default": "variable",
             },
@@ -662,7 +802,7 @@ export const configureMermaidLanguage = (monaco: any) => {
           {
             cases: {
               "@sankeyBlockKeywords": "typeKeyword",
-              "@sankeyKeywords": "keyword", 
+              "@sankeyKeywords": "keyword",
               "@default": "variable",
             },
           },
@@ -680,7 +820,7 @@ export const configureMermaidLanguage = (monaco: any) => {
             cases: {
               "@architectureBlockKeywords": "typeKeyword",
               "@architectureKeywords": "keyword",
-              "@default": "variable", 
+              "@default": "variable",
             },
           },
         ],
@@ -691,24 +831,37 @@ export const configureMermaidLanguage = (monaco: any) => {
     },
   });
 
-  // Define themes
+  // Define themes - Soft Organic palette
   monaco.editor.defineTheme("mermaid", {
     base: "vs",
     inherit: true,
-    colors: {},
+    colors: {
+      "editor.background": "#fdfbf7",
+      "editor.foreground": "#2d3436",
+      "editor.lineHighlightBackground": "#f5f0e810",
+      "editor.selectionBackground": "#b8d4b840",
+      "editor.inactiveSelectionBackground": "#b8d4b825",
+      "editorCursor.foreground": "#8fb38f",
+      "editorLineNumber.foreground": "#9ca3af",
+      "editorLineNumber.activeForeground": "#6a9a6a",
+      "editorIndentGuide.background": "#e5e7eb",
+      "editorIndentGuide.activeBackground": "#b8d4b8",
+      "editorBracketMatch.background": "#b8d4b840",
+      "editorBracketMatch.border": "#8fb38f",
+    },
     rules: [
-      { token: "typeKeyword", foreground: "9650c8", fontStyle: "bold" },
-      { token: "keyword", foreground: "649696" },
-      { token: "custom-error", foreground: "ff0000", fontStyle: "bold" },
-      { token: "string", foreground: "AA8500" },
-      { token: "transition", foreground: "008800", fontStyle: "bold" },
-      { token: "delimiter.bracket", foreground: "000000", fontStyle: "bold" },
-      { token: "annotation", foreground: "4b4b96" },
-      { token: "number", foreground: "4b4b96" },
-      { token: "comment", foreground: "888c89" },
-      { token: "variable", foreground: "A22889" },
-      { token: "type", foreground: "2BDEA8" },
-      { token: "identifier", foreground: "9cdcfe" },
+      { token: "typeKeyword", foreground: "6a9a6a", fontStyle: "bold" },
+      { token: "keyword", foreground: "8fb38f" },
+      { token: "custom-error", foreground: "f4a261", fontStyle: "bold" },
+      { token: "string", foreground: "d68c45" },
+      { token: "transition", foreground: "6a9a6a", fontStyle: "bold" },
+      { token: "delimiter.bracket", foreground: "636e72", fontStyle: "bold" },
+      { token: "annotation", foreground: "9b7ec9" },
+      { token: "number", foreground: "9b7ec9" },
+      { token: "comment", foreground: "9ca3af" },
+      { token: "variable", foreground: "d77a8b" },
+      { token: "type", foreground: "6a9a6a" },
+      { token: "identifier", foreground: "636e72" },
     ],
   });
 
@@ -728,30 +881,21 @@ export const configureMermaidLanguage = (monaco: any) => {
           label: "loop",
           kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: ["loop ${1:Loop text}", "\t$0", "end"].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "Sequence Diagram Loops",
         },
         {
           label: "alt",
           kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: [
-            "alt ${1:Describing text}",
-            "\t$0",
-            "else",
-            "\t",
-            "end",
-          ].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertText: ["alt ${1:Describing text}", "\t$0", "else", "\t", "end"].join("\n"),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "Alternative Path",
         },
         {
           label: "opt",
           kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: ["opt ${1:Describing text}", "\t$0", "end"].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "Optional Path",
         },
         {
@@ -766,86 +910,72 @@ export const configureMermaidLanguage = (monaco: any) => {
             "\t",
             "end",
           ].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "Parallel Actions",
         },
         {
           label: "rect",
           kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: ["rect ${1:rgb(0, 255, 0)}", "\t$0", "end"].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "Background Color",
         },
         {
           label: "subgraph",
           kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: ["subgraph ${1:title}", "\t$0", "end"].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "Subgraph",
         },
         {
           label: "class",
           kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: ["class ${1:className} {", "\t$0", "}"].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "Class",
         },
         {
           label: "state",
           kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: ["state ${1:stateName} {", "\t$0", "}"].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "State",
         },
         {
           label: "note",
           kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: ["note ${1:right of State1}", "\t$0", "end note"].join(
-            "\n"
-          ),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertText: ["note ${1:right of State1}", "\t$0", "end note"].join("\n"),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "State",
         },
         {
           label: "section",
           kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: ["section ${1:Go to work}", "\t$0"].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "User-journey Section",
         },
         {
           label: "element",
           kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: ["element ${1:test_entity} {", "\t$0", "}"].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "Requirement Diagram Element",
         },
         {
           label: "options",
           kind: monaco.languages.CompletionItemKind.Snippet,
           insertText: ["options", "{", "    $0", "}", "end"].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "Git Graph Options",
         },
         ...keywords.c4Diagram.blockKeywords.map((containerType) => ({
           label: containerType,
           kind: monaco.languages.CompletionItemKind.Snippet,
-          insertText: [
-            containerType + ' (${1:boundary_id}, "New Boundary") {',
-            "    $0",
-            "}",
-          ].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertText: [containerType + ' (${1:boundary_id}, "New Boundary") {', "    $0", "}"].join(
+            "\n",
+          ),
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: "C4 Diagram " + containerType + " Boundary",
         })),
         ...requirementDiagrams.map((requirementDiagramType) => ({
@@ -859,8 +989,7 @@ export const configureMermaidLanguage = (monaco: any) => {
             "\tverifyMethod: test",
             "}",
           ].join("\n"),
-          insertTextRules:
-            monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+          insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: requirementDiagramType
             .split(/(?=[A-Z])/)
             .map((part) => part[0].toUpperCase() + part.slice(1))
@@ -872,9 +1001,9 @@ export const configureMermaidLanguage = (monaco: any) => {
               .map((diagramKeywords) =>
                 Object.entries(diagramKeywords)
                   .filter((keywordType) => keywordType[0] !== "annotations")
-                  .map((entry) => entry[1])
+                  .map((entry) => entry[1]),
               )
-              .flat(2)
+              .flat(2),
           ),
         ].map((keyword) => ({
           label: keyword,

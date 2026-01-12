@@ -113,7 +113,9 @@ body {
   position: relative;
   contain: layout style;
   content-visibility: auto;
-  background: var(--color-bg-card);
+  background-color: var(--color-bg-card);
+  background-image: radial-gradient(circle, var(--color-sage-light) 1px, transparent 1px);
+  background-size: 20px 20px;
 }
 
 #mermaid-preview {

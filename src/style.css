@@ -32,10 +32,10 @@
   --gradient-warm: linear-gradient(135deg, var(--color-coral-light) 0%, var(--color-rose) 100%);
   --gradient-soft: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-warm) 100%);
 
-  /* Shadows */
-  --shadow-soft: 0 4px 20px rgba(143, 179, 143, 0.12);
-  --shadow-medium: 0 8px 32px rgba(143, 179, 143, 0.15);
-  --shadow-glow: 0 0 40px rgba(143, 179, 143, 0.2);
+  /* Shadows - minimal */
+  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-medium: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
   /* Typography */
   --font-display: "Fraunces", Georgia, serif;
@@ -68,67 +68,11 @@ body {
 }
 
 /* ==========================================================================
-   Decorative Background Blobs
+   Decorative Background
    ========================================================================== */
 
 .bg-decoration {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 0;
-}
-
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-  animation: float 20s ease-in-out infinite;
-}
-
-.blob-1 {
-  width: 600px;
-  height: 600px;
-  background: var(--color-sage-light);
-  top: -200px;
-  right: -100px;
-  animation-delay: 0s;
-}
-
-.blob-2 {
-  width: 500px;
-  height: 500px;
-  background: var(--color-lavender-light);
-  bottom: -150px;
-  left: -100px;
-  animation-delay: -7s;
-}
-
-.blob-3 {
-  width: 400px;
-  height: 400px;
-  background: var(--color-coral-light);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation-delay: -14s;
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translate(0, 0) scale(1);
-  }
-  25% {
-    transform: translate(30px, -30px) scale(1.05);
-  }
-  50% {
-    transform: translate(-20px, 20px) scale(0.95);
-  }
-  75% {
-    transform: translate(-30px, -20px) scale(1.02);
-  }
+  display: none;
 }
 
 /* ==========================================================================
@@ -251,18 +195,15 @@ body {
 
 .button {
   padding: 8px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;
   font-size: 14px;
   font-family: var(--font-body);
   font-weight: 500;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.9);
+  background: white;
   color: var(--color-text);
-  transform: translate3d(0, 0, 0);
-  transition: all var(--transition-fast);
+  transition: background var(--transition-fast);
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
@@ -272,13 +213,7 @@ body {
 }
 
 .button:hover {
-  background: white;
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-medium);
-}
-
-.button:active {
-  transform: translateY(0);
+  background: var(--color-bg-warm);
 }
 
 /* Settings Button */
@@ -319,38 +254,40 @@ body {
 }
 
 .zoom-button {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   padding: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   border-radius: 50%;
   background: white;
   color: var(--color-sage-dark);
-  border: 2px solid var(--color-sage-light);
+  border: 1px solid var(--color-sage-light);
   box-shadow: var(--shadow-soft);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .zoom-button:hover {
   background: var(--color-sage);
   color: white;
-  border-color: var(--color-sage);
 }
 
 .skill-button {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border-radius: 50%;
-  background: var(--gradient-primary);
+  background: var(--color-sage);
   color: white;
   border: none;
-  box-shadow: var(--shadow-medium);
+  box-shadow: var(--shadow-soft);
+  transition: background var(--transition-fast);
 }
 
 .skill-button:hover {
-  transform: translateY(-3px) scale(1.05);
-  box-shadow: var(--shadow-glow);
+  background: var(--color-sage-dark);
 }
 
 /* ==========================================================================
@@ -432,8 +369,6 @@ body {
   z-index: 1000;
   max-height: 400px;
   overflow-y: auto;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   animation: slideUp 0.2s ease-out;
 }
 
@@ -476,12 +411,12 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 14px 18px;
+  padding: 12px 16px;
   background: transparent;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background var(--transition-fast);
   text-align: left;
   width: 100%;
   box-sizing: border-box;
@@ -489,11 +424,6 @@ body {
 
 .preset-item:hover {
   background: var(--color-sage-light);
-  transform: translateX(4px);
-}
-
-.preset-item:active {
-  background: var(--color-sage);
 }
 
 .preset-item-title {
@@ -531,8 +461,6 @@ body {
     opacity var(--transition-normal);
   max-width: 420px;
   margin-top: 12px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   animation: slideUp 0.25s ease-out;
 }
 
@@ -598,26 +526,20 @@ body {
 .save-button {
   margin-top: 8px;
   width: 100%;
-  padding: 14px 24px;
-  background: var(--gradient-primary);
+  padding: 12px 24px;
+  background: var(--color-sage);
   color: white;
   border: none;
-  border-radius: var(--radius-md);
-  font-size: 15px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
   font-family: var(--font-body);
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-soft);
+  transition: background var(--transition-fast);
 }
 
 .save-button:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-medium);
-}
-
-.save-button:active {
-  transform: translateY(0);
+  background: var(--color-sage-dark);
 }
 
 /* Settings Saved Message */
@@ -681,7 +603,6 @@ body {
   justify-content: center;
   text-align: center;
   z-index: 10;
-  backdrop-filter: blur(10px);
   margin: 0;
 }
 
@@ -724,28 +645,22 @@ body {
   align-items: center;
   gap: 10px;
   padding: 10px 20px;
-  background: var(--gradient-primary);
+  background: var(--color-sage);
   color: white;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   font-size: 14px;
   font-family: var(--font-body);
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background var(--transition-fast);
   width: 100%;
   height: 42px;
   box-sizing: border-box;
-  box-shadow: var(--shadow-soft);
 }
 
 .fix-with-ai-button:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-medium);
-}
-
-.fix-with-ai-button:active {
-  transform: translateY(0);
+  background: var(--color-sage-dark);
 }
 
 .fix-with-ai-button svg {
@@ -913,33 +828,30 @@ body {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 12px 18px;
-  border: 2px solid rgba(143, 179, 143, 0.3);
-  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  border: 1px solid var(--color-sage-light);
+  border-radius: var(--radius-sm);
   background: white;
   color: var(--color-text);
   font-size: 14px;
   font-family: var(--font-body);
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background var(--transition-fast);
 }
 
 .skill-action-btn:hover {
   background: var(--color-bg-warm);
-  border-color: var(--color-sage-light);
-  transform: translateY(-1px);
 }
 
 .skill-action-btn.primary {
-  background: var(--gradient-primary);
+  background: var(--color-sage);
   border: none;
   color: white;
 }
 
 .skill-action-btn.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-soft);
+  background: var(--color-sage-dark);
 }
 
 .skill-action-btn.success {

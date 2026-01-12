@@ -17,11 +17,6 @@
     />
   </head>
   <body>
-    <div class="bg-decoration">
-      <div class="blob blob-1"></div>
-      <div class="blob blob-2"></div>
-      <div class="blob blob-3"></div>
-    </div>
     <div id="app">
       <div class="container">
         <div class="editor-pane">
@@ -97,15 +92,10 @@
                 </div>
                 <div class="form-group">
                   <label for="model-id">Model ID:</label>
-                  <input
-                    type="text"
-                    id="model-id"
-                    placeholder="gemini-2.5-pro"
-                    autocomplete="off"
-                  />
-                  <small id="model-hint" class="form-hint"
-                    >e.g., gemini-2.5-pro, gemini-2.0-flash</small
-                  >
+                  <select id="model-id">
+                    <option value="">Click to load models...</option>
+                  </select>
+                  <small id="model-hint" class="form-hint">Click to fetch available models</small>
                 </div>
                 <button id="save-settings" class="save-button">Save Settings</button>
               </div>

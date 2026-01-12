@@ -287,33 +287,102 @@ class MermaidEditor {
     const saveSettingsBtn = document.querySelector<HTMLButtonElement>("#save-settings")!;
     const providerSelect = document.querySelector<HTMLSelectElement>("#ai-provider")!;
     const apiTokenInput = document.querySelector<HTMLInputElement>("#api-token")!;
-    const modelIdInput = document.querySelector<HTMLInputElement>("#model-id")!;
+    const modelIdSelect = document.querySelector<HTMLSelectElement>("#model-id")!;
     const modelHint = document.querySelector<HTMLElement>("#model-hint")!;
 
-    // Model hints per provider
-    const modelHints: Record<AIProviderType, string> = {
-      google: "e.g., gemini-2.5-pro, gemini-2.0-flash",
-      openai: "e.g., gpt-4o, gpt-4-turbo, gpt-3.5-turbo",
-      anthropic: "e.g., claude-sonnet-4-20250514, claude-3-5-sonnet-20241022",
+    let modelsFetched = false;
+    let currentFetchProvider: AIProviderType | null = null;
+
+    const clearSelectOptions = (select: HTMLSelectElement) => {
+      while (select.firstChild) {
+        select.removeChild(select.firstChild);
+      }
+    };
+
+    const addSelectOption = (select: HTMLSelectElement, value: string, text: string) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = text;
+      select.appendChild(option);
     };
 
     // Load saved settings
     const savedProvider = (localStorage.getItem("aiProvider") as AIProviderType) || "google";
+    const savedModel = localStorage.getItem("aiModel") || DEFAULT_MODELS[savedProvider];
     providerSelect.value = savedProvider;
     apiTokenInput.value = localStorage.getItem("aiApiKey") || "";
-    modelIdInput.value = localStorage.getItem("aiModel") || DEFAULT_MODELS[savedProvider];
-    modelIdInput.placeholder = DEFAULT_MODELS[savedProvider];
-    modelHint.textContent = modelHints[savedProvider];
 
-    // Update model hint when provider changes
+    // Set initial model option
+    clearSelectOptions(modelIdSelect);
+    addSelectOption(modelIdSelect, savedModel, savedModel);
+    modelIdSelect.value = savedModel;
+    modelHint.textContent = "Click to fetch available models";
+
+    // Fetch models from API
+    const fetchModels = async (provider: AIProviderType, apiKey: string) => {
+      if (!apiKey) {
+        modelHint.textContent = "Enter API key first";
+        return;
+      }
+
+      clearSelectOptions(modelIdSelect);
+      addSelectOption(modelIdSelect, "", "Loading models...");
+      modelIdSelect.disabled = true;
+      modelHint.textContent = "Fetching models...";
+
+      try {
+        const models = await this.fetchModelsForProvider(provider, apiKey);
+        clearSelectOptions(modelIdSelect);
+
+        models.forEach((model) => {
+          addSelectOption(modelIdSelect, model, model);
+        });
+
+        // Select saved model or default
+        const currentModel = savedModel || DEFAULT_MODELS[provider];
+        if (models.includes(currentModel)) {
+          modelIdSelect.value = currentModel;
+        } else if (models.length > 0) {
+          modelIdSelect.value = models[0];
+        }
+
+        modelsFetched = true;
+        currentFetchProvider = provider;
+        modelHint.textContent = `${models.length} models available`;
+      } catch (error) {
+        console.error("Failed to fetch models:", error);
+        clearSelectOptions(modelIdSelect);
+        addSelectOption(modelIdSelect, DEFAULT_MODELS[provider], DEFAULT_MODELS[provider]);
+        modelIdSelect.value = DEFAULT_MODELS[provider];
+        modelHint.textContent = "Failed to fetch models - using default";
+      } finally {
+        modelIdSelect.disabled = false;
+      }
+    };
+
+    // Fetch models when clicking on select
+    modelIdSelect.addEventListener("focus", () => {
+      const provider = providerSelect.value as AIProviderType;
+      const apiKey = apiTokenInput.value.trim();
+      if (!modelsFetched || currentFetchProvider !== provider) {
+        fetchModels(provider, apiKey);
+      }
+    });
+
+    // Update when provider changes
     providerSelect.addEventListener("change", () => {
       const provider = providerSelect.value as AIProviderType;
-      modelIdInput.placeholder = DEFAULT_MODELS[provider];
-      modelHint.textContent = modelHints[provider];
-      // Update model to default if current model doesn't match new provider
-      if (!modelIdInput.value || modelIdInput.value === DEFAULT_MODELS[savedProvider]) {
-        modelIdInput.value = DEFAULT_MODELS[provider];
-      }
+      modelsFetched = false;
+      clearSelectOptions(modelIdSelect);
+      addSelectOption(modelIdSelect, DEFAULT_MODELS[provider], DEFAULT_MODELS[provider]);
+      modelIdSelect.value = DEFAULT_MODELS[provider];
+      modelHint.textContent = "Click to fetch available models";
+    });
+
+    // Reset fetch state when API key changes
+    apiTokenInput.addEventListener("input", () => {
+      modelsFetched = false;
+      modelHint.textContent = "Click to fetch available models";
     });
 
     settingsBtn.addEventListener("click", () => {
@@ -327,7 +396,7 @@ class MermaidEditor {
     saveSettingsBtn.addEventListener("click", () => {
       const provider = providerSelect.value as AIProviderType;
       const apiToken = apiTokenInput.value.trim();
-      const modelId = modelIdInput.value.trim() || DEFAULT_MODELS[provider];
+      const modelId = modelIdSelect.value.trim() || DEFAULT_MODELS[provider];
 
       localStorage.setItem("aiProvider", provider);
       localStorage.setItem("aiApiKey", apiToken);
@@ -843,6 +912,65 @@ class MermaidEditor {
       this.panZoomInstance.zoomOut();
     }
   };
+
+  /**
+   * Fetch available models from the AI provider API
+   */
+  private async fetchModelsForProvider(
+    provider: AIProviderType,
+    apiKey: string,
+  ): Promise<string[]> {
+    switch (provider) {
+      case "google":
+        return this.fetchGoogleModels(apiKey);
+      case "openai":
+        return this.fetchOpenAIModels(apiKey);
+      case "anthropic":
+        return this.getAnthropicModels();
+    }
+  }
+
+  private async fetchGoogleModels(apiKey: string): Promise<string[]> {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+    );
+    if (!response.ok) throw new Error("Failed to fetch Google models");
+
+    const data = await response.json();
+    return data.models
+      .filter((m: { name: string; supportedGenerationMethods?: string[] }) =>
+        m.supportedGenerationMethods?.includes("generateContent"),
+      )
+      .map((m: { name: string }) => m.name.replace("models/", ""))
+      .sort();
+  }
+
+  private async fetchOpenAIModels(apiKey: string): Promise<string[]> {
+    const response = await fetch("https://api.openai.com/v1/models", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!response.ok) throw new Error("Failed to fetch OpenAI models");
+
+    const data = await response.json();
+    return data.data
+      .filter((m: { id: string }) => m.id.startsWith("gpt-"))
+      .map((m: { id: string }) => m.id)
+      .sort()
+      .reverse();
+  }
+
+  private getAnthropicModels(): Promise<string[]> {
+    // Anthropic doesn't have a public models list API, return known models
+    return Promise.resolve([
+      "claude-sonnet-4-20250514",
+      "claude-opus-4-20250514",
+      "claude-3-7-sonnet-20250219",
+      "claude-3-5-sonnet-20241022",
+      "claude-3-5-haiku-20241022",
+      "claude-3-opus-20240229",
+      "claude-3-haiku-20240307",
+    ]);
+  }
 
   private showFixWithAIOption(): void {
     const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;

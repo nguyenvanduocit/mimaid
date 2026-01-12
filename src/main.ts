@@ -3,11 +3,26 @@ import svgPanZoom from "svg-pan-zoom";
 import "./modern-normalize.css";
 import "./style.css";
 import { EditorState, EditorElements } from "./types";
-import { EDITOR_CONFIG, MONACO_CONFIG, MERMAID_CONFIG, CREATION_PRESETS, MODIFICATION_PRESETS, AI_CONFIG } from "./config";
+import {
+  EDITOR_CONFIG,
+  MONACO_CONFIG,
+  MERMAID_CONFIG,
+  CREATION_PRESETS,
+  MODIFICATION_PRESETS,
+  AI_CONFIG,
+} from "./config";
 import { AIHandler } from "./ai-handler";
 import { CollaborationHandler } from "./collaboration";
-import { debounce, loadDiagramFromURL, generateDiagramHash, getStoredEditorWidth, setStoredEditorWidth, parseMermaidError } from "./utils";
+import {
+  debounce,
+  loadDiagramFromURL,
+  generateDiagramHash,
+  getStoredEditorWidth,
+  setStoredEditorWidth,
+  parseMermaidError,
+} from "./utils";
 import { EventHelpers } from "./events";
+import { SKILL_CONTENT } from "./skill-content";
 
 let monacoInstance: any | null = null;
 
@@ -18,11 +33,11 @@ async function loadMonaco() {
   if (!monacoInstance) {
     const monaco = await import("monaco-editor");
     monacoInstance = monaco;
-    
+
     // Configure Mermaid language after Monaco is loaded
     const { configureMermaidLanguage } = await import("./configMermaidLanguage");
     configureMermaidLanguage(monaco);
-    
+
     return monaco;
   }
   return monacoInstance;
@@ -59,8 +74,8 @@ class MermaidEditor {
     this.loadInitialState();
     this.updateInputAreaVisibility();
     this.setupPresets();
-    
-    EventHelpers.safeEmit('app:ready', {});
+
+    EventHelpers.safeEmit("app:ready", {});
   }
 
   private initializeDOM(): void {
@@ -78,7 +93,7 @@ class MermaidEditor {
       errorOverlay: document.querySelector(".error-overlay")!,
       zoomInButton: document.querySelector<HTMLButtonElement>("#zoom-in-btn")!,
       zoomOutButton: document.querySelector<HTMLButtonElement>("#zoom-out-btn")!,
-      generationStatus: document.querySelector<HTMLSpanElement>("#generation-status")!
+      generationStatus: document.querySelector<HTMLSpanElement>("#generation-status")!,
     };
 
     this.elements.generationStatus = document.querySelector<HTMLSpanElement>("#generation-status")!;
@@ -114,13 +129,13 @@ class MermaidEditor {
   private async setupEditor(): Promise<void> {
     const code = loadDiagramFromURL() || "";
     const editorElement = document.querySelector<HTMLDivElement>("#monaco-editor");
-    
+
     if (!editorElement) return;
 
     this.monaco = await loadMonaco();
     this.editor = this.monaco.editor.create(editorElement, {
       value: code,
-      ...MONACO_CONFIG
+      ...MONACO_CONFIG,
     });
 
     const resizeObserver = new ResizeObserver(() => {
@@ -134,24 +149,24 @@ class MermaidEditor {
     this.setupEditorEventListeners();
 
     this.setupHandlers();
-    
+
     // Process any pending error now that editor is ready
     if (this.pendingError) {
-      console.log('[DEBUG] Processing pending error after editor ready');
+      console.log("[DEBUG] Processing pending error after editor ready");
       this.setErrorMarkers(this.pendingError.message, this.pendingError.code);
       this.pendingError = null;
     }
-    
+
     // Register code action provider for AI fixes
     this.registerAICodeActionProvider();
-    
+
     // Emit editor ready event
-    EventHelpers.safeEmit('editor:ready', { editor: this.editor });
+    EventHelpers.safeEmit("editor:ready", { editor: this.editor });
   }
 
   private async setupHandlers(): Promise<void> {
     const inputField = document.querySelector<HTMLInputElement>("#input-field")!;
-    const inputArea = document.querySelector<HTMLDivElement>("#input-area")!
+    const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
 
     // Only initialize AI handler if API key is available
     const apiKey = localStorage.getItem("googleAiApiKey") || "";
@@ -159,13 +174,13 @@ class MermaidEditor {
       this.aiHandler = new AIHandler(this.editor, {
         inputField,
         inputArea,
-        generationStatus: this.elements.generationStatus
+        generationStatus: this.elements.generationStatus,
       });
     }
 
     // Lazy load collaboration handler
-    if (window.location.search.includes('room')) {
-      const { CollaborationHandler } = await import('./collaboration');
+    if (window.location.search.includes("room")) {
+      const { CollaborationHandler } = await import("./collaboration");
       this.collaborationHandler = new CollaborationHandler(this.editor);
       this.collaborationHandler.setup();
     }
@@ -185,19 +200,19 @@ class MermaidEditor {
    */
   private setupEditorEventListeners(): void {
     const debouncedEmitChange = debounce((code: string) => {
-      EventHelpers.safeEmit('editor:change', { code });
+      EventHelpers.safeEmit("editor:change", { code });
     }, 250);
     const debouncedGenerateDiagramHash = debounce((code: string) => generateDiagramHash(code), 250);
-    
+
     this.editor.onDidChangeModelContent(() => {
       requestAnimationFrame(() => {
         const code = this.editor.getValue();
-        
+
         // Clear error state immediately when content becomes empty
         if (this.isEmptyCode(code)) {
           this.hideError();
         }
-        
+
         debouncedEmitChange(code);
         debouncedGenerateDiagramHash(code);
       });
@@ -209,41 +224,42 @@ class MermaidEditor {
     this.setupInputListeners();
 
     this.elements.zoomInButton.addEventListener("click", () => {
-      EventHelpers.safeEmit('ui:zoom', { direction: 'in' });
+      EventHelpers.safeEmit("ui:zoom", { direction: "in" });
       this.handleZoomButtonClick(EDITOR_CONFIG.zoomFactor);
     });
     this.elements.zoomOutButton.addEventListener("click", () => {
-      EventHelpers.safeEmit('ui:zoom', { direction: 'out' });
+      EventHelpers.safeEmit("ui:zoom", { direction: "out" });
       this.handleZoomButtonClick(-EDITOR_CONFIG.zoomFactor);
     });
     this.setupSettingsListeners();
+    this.setupSkillModalListeners();
   }
 
   private setupAppEventListeners(): void {
     // Listen for editor changes to trigger diagram rendering
-    EventHelpers.safeListen('editor:change', async ({ code }) => {
+    EventHelpers.safeListen("editor:change", async ({ code }) => {
       await this.renderDiagram(code);
     });
 
     // Listen for AI completion to trigger diagram update
-    EventHelpers.safeListen('ai:complete', async ({ code }) => {
-      EventHelpers.safeEmit('editor:change', { code });
+    EventHelpers.safeListen("ai:complete", async ({ code }) => {
+      EventHelpers.safeEmit("editor:change", { code });
     });
 
     // Listen for diagram render requests
-    EventHelpers.safeListen('diagram:render', async ({ code }) => {
+    EventHelpers.safeListen("diagram:render", async ({ code }) => {
       await this.renderMermaidDiagram(code);
     });
 
     // Listen for app loading state changes
-    EventHelpers.safeListen('app:loading', ({ isLoading }) => {
+    EventHelpers.safeListen("app:loading", ({ isLoading }) => {
       // Update global loading state if needed
-      document.body.classList.toggle('loading', isLoading);
+      document.body.classList.toggle("loading", isLoading);
     });
-    
+
     // Listen for app errors
-    EventHelpers.safeListen('app:error', ({ error }) => {
-      console.error('App error:', error);
+    EventHelpers.safeListen("app:error", ({ error }) => {
+      console.error("App error:", error);
       this.showError(error);
     });
   }
@@ -256,7 +272,7 @@ class MermaidEditor {
           e.preventDefault();
           const prompt = inputField.value.trim();
           if (prompt) {
-            EventHelpers.safeEmit('ui:input:submit', { prompt });
+            EventHelpers.safeEmit("ui:input:submit", { prompt });
           }
         }
       });
@@ -274,7 +290,7 @@ class MermaidEditor {
     modelIdInput.value = localStorage.getItem("googleAiModel") || "gemini-2.5-pro";
 
     settingsBtn.addEventListener("click", () => {
-      EventHelpers.safeEmit('ui:settings:open', {});
+      EventHelpers.safeEmit("ui:settings:open", {});
       settingsDialog.classList.toggle("hidden");
       if (!settingsDialog.classList.contains("hidden")) {
         apiTokenInput.focus();
@@ -291,23 +307,23 @@ class MermaidEditor {
       settingsDialog.classList.add("hidden");
 
       // Emit settings save event
-      EventHelpers.safeEmit('ui:settings:save', { apiKey: apiToken, model: modelId });
-      
+      EventHelpers.safeEmit("ui:settings:save", { apiKey: apiToken, model: modelId });
+
       // Update input area visibility after saving settings
       this.updateInputAreaVisibility();
-      
+
       // Initialize or clear AI handler based on API key availability
       if (apiToken && apiToken.trim().length > 0) {
         // Only create AI handler if it doesn't exist yet
         if (!this.aiHandler) {
           const inputField = document.querySelector<HTMLInputElement>("#input-field");
           const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
-          
+
           if (inputField) {
             this.aiHandler = new AIHandler(this.editor, {
               inputField,
               inputArea,
-              generationStatus: this.elements.generationStatus
+              generationStatus: this.elements.generationStatus,
             });
           }
         }
@@ -315,13 +331,13 @@ class MermaidEditor {
         // Clear AI handler if API key is removed
         this.aiHandler = null as any;
       }
-      
-      // Show visual feedback 
+
+      // Show visual feedback
       const statusMessage = document.createElement("div");
       statusMessage.textContent = "Settings saved successfully!";
       statusMessage.className = "settings-saved-message";
       document.body.appendChild(statusMessage);
-      
+
       setTimeout(() => {
         statusMessage.classList.add("fade-out");
         setTimeout(() => document.body.removeChild(statusMessage), 500);
@@ -353,7 +369,7 @@ class MermaidEditor {
       document.removeEventListener("mouseup", handleMouseUp);
       const width = this.elements.editorPane.style.flexBasis;
       setStoredEditorWidth(width);
-      EventHelpers.safeEmit('editor:resize', { width });
+      EventHelpers.safeEmit("editor:resize", { width });
     };
 
     this.elements.handle.addEventListener("mousedown", () => {
@@ -413,11 +429,11 @@ class MermaidEditor {
 
     const tempDiv = this.createTempRenderDiv();
     const result = await mermaid.render("mermaid-diagram", code, tempDiv);
-    
+
     requestAnimationFrame(() => {
       this.updatePreviewWithSVG(result.svg);
       this.setupPanZoom();
-      EventHelpers.safeEmit('diagram:rendered', { svg: result.svg });
+      EventHelpers.safeEmit("diagram:rendered", { svg: result.svg });
       document.body.removeChild(tempDiv);
     });
   }
@@ -426,9 +442,9 @@ class MermaidEditor {
    * Create temporary div for Mermaid rendering
    */
   private createTempRenderDiv(): HTMLDivElement {
-    const tempDiv = document.createElement('div');
-    tempDiv.style.position = 'absolute';
-    tempDiv.style.visibility = 'hidden';
+    const tempDiv = document.createElement("div");
+    tempDiv.style.position = "absolute";
+    tempDiv.style.visibility = "hidden";
     document.body.appendChild(tempDiv);
     return tempDiv;
   }
@@ -466,7 +482,7 @@ class MermaidEditor {
   private handleRenderError(error: unknown, code: string): void {
     const errorMessage = error instanceof Error ? error.message : String(error);
     this.currentError = errorMessage;
-    
+
     this.processErrorMarkers(errorMessage, code);
     this.emitErrorEvents(errorMessage);
     this.showError(errorMessage);
@@ -488,10 +504,9 @@ class MermaidEditor {
    * Emit error events
    */
   private emitErrorEvents(errorMessage: string): void {
-    EventHelpers.safeEmit('diagram:error', { error: errorMessage });
-    EventHelpers.safeEmit('editor:error', { error: errorMessage });
+    EventHelpers.safeEmit("diagram:error", { error: errorMessage });
+    EventHelpers.safeEmit("editor:error", { error: errorMessage });
   }
-
 
   /**
    * Render diagram (wrapper method for renderMermaidDiagram)
@@ -515,16 +530,16 @@ class MermaidEditor {
   private hideError(): void {
     this.elements.errorOverlay.style.display = "none";
     this.currentError = null;
-    
+
     // Clear Monaco error markers
     this.clearErrorMarkers();
-    
+
     // Hide error-specific elements
     const fixButton = document.querySelector<HTMLButtonElement>("#fix-with-ai-btn");
     const errorWarning = document.querySelector<HTMLDivElement>(".api-key-warning.error-state");
     if (fixButton) fixButton.style.display = "none";
     if (errorWarning) errorWarning.style.display = "none";
-    
+
     // Restore normal input area when error is cleared
     this.updateInputAreaVisibility();
   }
@@ -541,9 +556,9 @@ class MermaidEditor {
     const parsedError = parseMermaidError(error, code);
     const markers = this.createErrorMarkers(parsedError, code);
     this.applyErrorDecorations(parsedError, code);
-    
+
     if (markers.length > 0) {
-      this.monaco.editor.setModelMarkers(model, 'mermaid', markers);
+      this.monaco.editor.setModelMarkers(model, "mermaid", markers);
     }
   }
 
@@ -554,7 +569,7 @@ class MermaidEditor {
     if (!this.monaco && monacoInstance) {
       this.monaco = monacoInstance;
     }
-    
+
     return !!(this.monaco && this.editor);
   }
 
@@ -580,17 +595,17 @@ class MermaidEditor {
    */
   private createLineMarker(parsedError: any, code: string): any {
     const startColumn = parsedError.column || 1;
-    const lines = code.split('\n');
-    const lineContent = lines[parsedError.line - 1] || '';
+    const lines = code.split("\n");
+    const lineContent = lines[parsedError.line - 1] || "";
     const endColumn = parsedError.column ? parsedError.column + 1 : lineContent.length + 1;
-    
+
     return {
       startLineNumber: parsedError.line,
       endLineNumber: parsedError.line,
       startColumn: startColumn,
       endColumn: endColumn,
       message: parsedError.message,
-      severity: this.monaco.MarkerSeverity.Error
+      severity: this.monaco.MarkerSeverity.Error,
     };
   }
 
@@ -598,17 +613,17 @@ class MermaidEditor {
    * Create fallback marker for first non-empty line
    */
   private createFallbackMarker(parsedError: any, code: string): any | null {
-    const lines = code.split('\n');
+    const lines = code.split("\n");
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      if (line && !line.startsWith('%%') && !line.startsWith('#')) {
+      if (line && !line.startsWith("%%") && !line.startsWith("#")) {
         return {
           startLineNumber: i + 1,
           endLineNumber: i + 1,
           startColumn: 1,
           endColumn: lines[i].length + 1,
           message: parsedError.message,
-          severity: this.monaco.MarkerSeverity.Error
+          severity: this.monaco.MarkerSeverity.Error,
         };
       }
     }
@@ -619,26 +634,33 @@ class MermaidEditor {
    * Apply error decorations to editor lines
    */
   private applyErrorDecorations(parsedError: any, code: string): void {
-    const lines = code.split('\n');
+    const lines = code.split("\n");
     let lineNumber = parsedError.line;
-    
+
     if (!lineNumber) {
       lineNumber = this.findFirstContentLine(lines);
     }
-    
+
     if (lineNumber) {
-      const lineContent = lines[lineNumber - 1] || '';
-      const decorationRange = new this.monaco.Range(lineNumber, 1, lineNumber, lineContent.length + 1);
-      
-      this.errorDecorations = this.editor.deltaDecorations(this.errorDecorations, [{
-        range: decorationRange,
-        options: {
-          isWholeLine: true,
-          className: 'mermaid-error-line',
-          glyphMarginClassName: 'mermaid-error-glyph',
-          linesDecorationsClassName: 'mermaid-error-line-number'
-        }
-      }]);
+      const lineContent = lines[lineNumber - 1] || "";
+      const decorationRange = new this.monaco.Range(
+        lineNumber,
+        1,
+        lineNumber,
+        lineContent.length + 1,
+      );
+
+      this.errorDecorations = this.editor.deltaDecorations(this.errorDecorations, [
+        {
+          range: decorationRange,
+          options: {
+            isWholeLine: true,
+            className: "mermaid-error-line",
+            glyphMarginClassName: "mermaid-error-glyph",
+            linesDecorationsClassName: "mermaid-error-line-number",
+          },
+        },
+      ]);
     }
   }
 
@@ -648,7 +670,7 @@ class MermaidEditor {
   private findFirstContentLine(lines: string[]): number | null {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      if (line && !line.startsWith('%%') && !line.startsWith('#')) {
+      if (line && !line.startsWith("%%") && !line.startsWith("#")) {
         return i + 1;
       }
     }
@@ -660,11 +682,11 @@ class MermaidEditor {
    */
   private clearErrorMarkers(): void {
     if (!this.ensureMonacoAvailable()) return;
-    
+
     const model = this.editor.getModel();
     if (!model) return;
-    
-    this.monaco.editor.setModelMarkers(model, 'mermaid', []);
+
+    this.monaco.editor.setModelMarkers(model, "mermaid", []);
     this.errorDecorations = this.editor.deltaDecorations(this.errorDecorations, []);
   }
 
@@ -673,110 +695,114 @@ class MermaidEditor {
    */
   private registerAICodeActionProvider(): void {
     if (!this.monaco || !this.editor) {
-      console.log('[DEBUG] Cannot register AI code action provider - monaco or editor not available', {
-        monaco: !!this.monaco,
-        editor: !!this.editor
-      });
+      console.log(
+        "[DEBUG] Cannot register AI code action provider - monaco or editor not available",
+        {
+          monaco: !!this.monaco,
+          editor: !!this.editor,
+        },
+      );
       return;
     }
 
-    console.log('[DEBUG] Registering AI code action provider', {
+    console.log("[DEBUG] Registering AI code action provider", {
       monaco: !!this.monaco,
       editor: !!this.editor,
-      monacoVersion: this.monaco.editor.VERSION || 'unknown'
+      monacoVersion: this.monaco.editor.VERSION || "unknown",
     });
 
     const actionProvider = {
       provideCodeActions: (model: any, range: any, context: any) => {
-        console.log('[DEBUG] provideCodeActions called', { range, context });
-        
+        console.log("[DEBUG] provideCodeActions called", { range, context });
+
         // Check if there are any markers (errors) in the current range
-        const markers = this.monaco.editor.getModelMarkers({ 
-          resource: model.uri 
-        });
-        
-        const markersInRange = markers.filter((marker: any) => {
-          return marker.startLineNumber >= range.startLineNumber &&
-                 marker.endLineNumber <= range.endLineNumber;
+        const markers = this.monaco.editor.getModelMarkers({
+          resource: model.uri,
         });
 
-        console.log('[DEBUG] Markers in range:', markersInRange);
+        const markersInRange = markers.filter((marker: any) => {
+          return (
+            marker.startLineNumber >= range.startLineNumber &&
+            marker.endLineNumber <= range.endLineNumber
+          );
+        });
+
+        console.log("[DEBUG] Markers in range:", markersInRange);
 
         if (markersInRange.length === 0) {
           return { actions: [], dispose: () => {} };
         }
 
         const actions = markersInRange.map((marker: any) => ({
-          title: '🤖 Fix with AI',
-          kind: 'quickfix',
+          title: "🤖 Fix with AI",
+          kind: "quickfix",
           diagnostics: [marker],
           isPreferred: true,
           command: {
-            id: 'mermaid.fixWithAI',
-            title: 'Fix with AI'
-          }
+            id: "mermaid.fixWithAI",
+            title: "Fix with AI",
+          },
         }));
 
         return {
           actions: actions,
-          dispose: () => {}
+          dispose: () => {},
         };
-      }
+      },
     };
 
     // Register the code action provider
-    const disposable1 = this.monaco.languages.registerCodeActionProvider('mermaid', actionProvider);
-    console.log('[DEBUG] Code action provider registered:', !!disposable1);
+    const disposable1 = this.monaco.languages.registerCodeActionProvider("mermaid", actionProvider);
+    console.log("[DEBUG] Code action provider registered:", !!disposable1);
 
     // Register the command that will be executed when the action is clicked
     const disposable2 = this.editor.addCommand(
       this.monaco.KeyMod.CtrlCmd | this.monaco.KeyCode.Period, // Ctrl/Cmd + .
       () => {
-        console.log('[DEBUG] Quick fix shortcut triggered');
-        this.editor.trigger('', 'editor.action.quickFix', null);
-      }
+        console.log("[DEBUG] Quick fix shortcut triggered");
+        this.editor.trigger("", "editor.action.quickFix", null);
+      },
     );
-    console.log('[DEBUG] Quick fix shortcut registered:', !!disposable2);
+    console.log("[DEBUG] Quick fix shortcut registered:", !!disposable2);
 
     // Register the fix command - just emit an event to trigger existing AI fix logic
-    const commandId = 'mermaid.fixWithAI';
-    
+    const commandId = "mermaid.fixWithAI";
+
     try {
       // Register the command with Monaco's command service
       this.monaco.editor.registerCommand(commandId, () => {
-        console.log('[DEBUG] Fix with AI command triggered');
-        
+        console.log("[DEBUG] Fix with AI command triggered");
+
         // Just emit an event to trigger the existing AI fix logic
-        EventHelpers.safeEmit('ui:fixWithAI', {});
-        
+        EventHelpers.safeEmit("ui:fixWithAI", {});
+
         // Call the existing handleFixWithAI method
         this.handleFixWithAI();
       });
-      console.log('[DEBUG] Monaco command registered:', commandId);
-      
+      console.log("[DEBUG] Monaco command registered:", commandId);
+
       // Also add it as an editor action for context menu and keybindings
       const actionDisposable = this.editor.addAction({
         id: commandId,
-        label: 'Fix Mermaid Error with AI',
+        label: "Fix Mermaid Error with AI",
         keybindings: [
-          this.monaco.KeyMod.CtrlCmd | this.monaco.KeyMod.Shift | this.monaco.KeyCode.KeyF
+          this.monaco.KeyMod.CtrlCmd | this.monaco.KeyMod.Shift | this.monaco.KeyCode.KeyF,
         ],
-        contextMenuGroupId: 'navigation',
+        contextMenuGroupId: "navigation",
         contextMenuOrder: 1.5,
         run: () => {
-          console.log('[DEBUG] Fix with AI action triggered');
-          
+          console.log("[DEBUG] Fix with AI action triggered");
+
           // Just emit an event to trigger the existing AI fix logic
-          EventHelpers.safeEmit('ui:fixWithAI', {});
-          
+          EventHelpers.safeEmit("ui:fixWithAI", {});
+
           // Call the existing handleFixWithAI method
           this.handleFixWithAI();
-        }
+        },
       });
-      console.log('[DEBUG] Editor action registered:', commandId, !!actionDisposable);
-      
+      console.log("[DEBUG] Editor action registered:", commandId, !!actionDisposable);
     } catch (error) {
-      console.error('[DEBUG] Error registering AI fix command:', error);
+      console.error("[DEBUG] Error registering AI fix command:", error);
     }
   }
 
@@ -796,13 +822,13 @@ class MermaidEditor {
     const apiKeyWarning = document.querySelector<HTMLDivElement>(".api-key-warning");
     const fixButton = document.querySelector<HTMLButtonElement>("#fix-with-ai-btn");
     const apiKey = localStorage.getItem("googleAiApiKey") || "";
-    
+
     // Hide normal input elements
     if (inputField) inputField.style.display = "none";
     if (presetButton) presetButton.style.display = "none";
     if (presetCard) presetCard.classList.add("hidden");
     if (apiKeyWarning) apiKeyWarning.style.display = "none";
-    
+
     if (apiKey && apiKey.trim().length > 0) {
       // Show or create fix with AI button when there's an error and API key is available
       if (!fixButton) {
@@ -817,7 +843,7 @@ class MermaidEditor {
           Fix with AI
         `;
         inputArea.appendChild(newFixButton);
-        
+
         // Attach event listener to the fix button
         newFixButton.addEventListener("click", async () => {
           await this.handleFixWithAI();
@@ -851,7 +877,7 @@ class MermaidEditor {
 
     const currentCode = this.editor.getValue();
     const errorMessage = this.currentError;
-    
+
     // Create a fix prompt with the current code and error
     const fixPrompt = `Please fix the following Mermaid diagram code that has an error:
 
@@ -867,14 +893,14 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     // Get or create the input field without removing existing ones
     const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
     let inputField = document.querySelector<HTMLInputElement>("#input-field");
-    
+
     if (!inputField) {
       inputField = document.createElement("input");
       inputField.type = "text";
       inputField.id = "input-field";
       inputField.style.display = "none";
       inputArea.appendChild(inputField);
-      
+
       // Attach event listener to the new input field
       inputField.addEventListener("keydown", async (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
@@ -885,22 +911,21 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
         }
       });
     }
-    
+
     // Set the fix prompt as the input value
     inputField.value = fixPrompt;
-    
+
     // Ensure AI handler is properly initialized with current DOM elements
     if (!this.aiHandler) {
       this.aiHandler = new AIHandler(this.editor, {
         inputField,
         inputArea,
-        generationStatus: this.elements.generationStatus
+        generationStatus: this.elements.generationStatus,
       });
     }
-    
+
     await this.aiHandler.handleSubmit();
   }
-
 
   /**
    * Update input area visibility based on API key availability
@@ -911,7 +936,7 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     const elements = this.getInputAreaElements();
     const apiKey = localStorage.getItem("googleAiApiKey") || "";
     const hasApiKey = apiKey.trim().length > 0;
-    
+
     if (hasApiKey) {
       this.showAIInputElements(elements);
     } else {
@@ -928,7 +953,7 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
       inputField: document.querySelector<HTMLInputElement>("#input-field"),
       presetButton: document.querySelector<HTMLButtonElement>("#preset-btn"),
       presetCard: document.querySelector<HTMLDivElement>("#preset-card"),
-      apiKeyWarning: document.querySelector<HTMLDivElement>(".api-key-warning")
+      apiKeyWarning: document.querySelector<HTMLDivElement>(".api-key-warning"),
     };
   }
 
@@ -1015,7 +1040,7 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     newInputField.id = "input-field";
     newInputField.placeholder = "Enter your prompt here and press enter...";
     inputArea.appendChild(newInputField);
-    
+
     this.attachInputFieldListener(newInputField);
   }
 
@@ -1115,21 +1140,21 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
 
     presetHeader.textContent = headerText;
     presetGrid.innerHTML = "";
-    
+
     presets.forEach((preset, index) => {
       const presetItem = document.createElement("button");
       presetItem.className = "preset-item";
       presetItem.dataset.presetIndex = index.toString();
       presetItem.dataset.presetType = hasContent ? "modification" : "creation";
-      
+
       const title = document.createElement("div");
       title.className = "preset-item-title";
       title.textContent = preset.title;
-      
+
       const description = document.createElement("div");
       description.className = "preset-item-description";
       description.textContent = preset.prompt;
-      
+
       presetItem.appendChild(title);
       presetItem.appendChild(description);
       presetGrid.appendChild(presetItem);
@@ -1146,12 +1171,12 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     // Toggle preset card visibility
     presetButton.addEventListener("click", (e) => {
       e.stopPropagation();
-      
+
       // Repopulate presets based on current editor state before showing
       if (presetCard.classList.contains("hidden")) {
         this.populatePresetGrid();
       }
-      
+
       presetCard.classList.toggle("hidden");
     });
 
@@ -1164,10 +1189,10 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
       const presetType = presetItem.dataset.presetType;
       const presets = presetType === "modification" ? MODIFICATION_PRESETS : CREATION_PRESETS;
       const preset = presets[presetIndex];
-      
+
       if (preset) {
         const isModification = presetType === "modification";
-        EventHelpers.safeEmit('ui:preset:select', { preset, isModification });
+        EventHelpers.safeEmit("ui:preset:select", { preset, isModification });
         presetCard.classList.add("hidden");
       }
     });
@@ -1191,8 +1216,88 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     });
   }
 
+  private setupSkillModalListeners(): void {
+    const skillBtn = document.querySelector<HTMLButtonElement>("#claude-skill-btn");
+    const skillModal = document.querySelector<HTMLDivElement>("#skill-modal");
+    const skillModalClose = document.querySelector<HTMLButtonElement>("#skill-modal-close");
+    const copySkillBtn = document.querySelector<HTMLButtonElement>("#copy-skill-btn");
+    const downloadSkillBtn = document.querySelector<HTMLButtonElement>("#download-skill-btn");
+
+    if (!skillBtn || !skillModal) return;
+
+    // Toggle skill modal
+    skillBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      skillModal.classList.toggle("hidden");
+    });
+
+    // Close modal
+    skillModalClose?.addEventListener("click", () => {
+      skillModal.classList.add("hidden");
+    });
+
+    // Copy skill to clipboard
+    copySkillBtn?.addEventListener("click", async () => {
+      await navigator.clipboard.writeText(SKILL_CONTENT);
+
+      // Show success state - using textContent for the text part
+      const svgEl = copySkillBtn.querySelector("svg");
+      if (svgEl) {
+        svgEl.outerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+      }
+      const textNode = copySkillBtn.lastChild;
+      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+        textNode.textContent = " Copied!";
+      }
+      copySkillBtn.classList.add("success");
+      copySkillBtn.classList.remove("primary");
+
+      setTimeout(() => {
+        const svgEl = copySkillBtn.querySelector("svg");
+        if (svgEl) {
+          svgEl.outerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+        }
+        const textNode = copySkillBtn.lastChild;
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+          textNode.textContent = " Copy to Clipboard";
+        }
+        copySkillBtn.classList.remove("success");
+        copySkillBtn.classList.add("primary");
+      }, 2000);
+    });
+
+    // Download skill file
+    downloadSkillBtn?.addEventListener("click", () => {
+      const blob = new Blob([SKILL_CONTENT], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "SKILL.md";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // Close modal when clicking outside
+    document.addEventListener("click", (e) => {
+      if (
+        !skillModal.contains(e.target as Node) &&
+        !skillBtn.contains(e.target as Node) &&
+        !skillModal.classList.contains("hidden")
+      ) {
+        skillModal.classList.add("hidden");
+      }
+    });
+
+    // Close on escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !skillModal.classList.contains("hidden")) {
+        skillModal.classList.add("hidden");
+      }
+    });
+  }
 }
 
 // Initialize the editor
 new MermaidEditor();
-

@@ -65,15 +65,23 @@
             <div id="settings-dialog" class="settings-dialog hidden">
               <div class="settings-content">
                 <div class="form-group">
-                  <label for="api-token">Google AI API Token:</label>
+                  <label for="ai-provider">AI Provider:</label>
+                  <select id="ai-provider">
+                    <option value="google">Google Gemini</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic Claude</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="api-token">API Key:</label>
                   <input
                     type="password"
                     id="api-token"
-                    placeholder="Enter your API token"
+                    placeholder="Enter your API key"
                     autocomplete="off"
                   />
                   <small class="form-hint"
-                    >Your token is stored locally and never sent to our servers</small
+                    >Your key is stored locally and never sent to our servers</small
                   >
                 </div>
                 <div class="form-group">
@@ -84,8 +92,8 @@
                     placeholder="gemini-2.5-pro"
                     autocomplete="off"
                   />
-                  <small class="form-hint"
-                    >e.g., gemini-2.5-pro, gemini-2.0-flash-thinking-exp, gemini-1.5-pro</small
+                  <small id="model-hint" class="form-hint"
+                    >e.g., gemini-2.5-pro, gemini-2.0-flash</small
                   >
                 </div>
                 <button id="save-settings" class="save-button">Save Settings</button>

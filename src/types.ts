@@ -21,30 +21,13 @@ export interface EditorElements {
   generationStatus: HTMLSpanElement;
 }
 
+export type AIProviderType = "google" | "openai" | "anthropic";
+
 export interface AIConfig {
+  provider: AIProviderType;
   apiKey: string;
   model: string;
   temperature: number;
-  maxTokens: number;
-  thinkingBudget?: number;
-  enableGrounding?: boolean;
-  enableUrlContext?: boolean;
-  dynamicRetrievalThreshold?: number;
-}
-
-export interface GroundingMetadata {
-  webSearchQueries?: string[];
-  groundingSources?: Array<{
-    uri: string;
-    snippet: string;
-  }>;
-  citationMetadata?: {
-    citationSources: Array<{
-      startIndex: number;
-      endIndex: number;
-      uri: string;
-    }>;
-  };
 }
 
 export interface Preset {
@@ -56,6 +39,6 @@ export interface MermaidError {
   message: string;
   line?: number;
   column?: number;
-  severity: 'error' | 'warning' | 'info';
+  severity: "error" | "warning" | "info";
   source?: string;
-} 
+}

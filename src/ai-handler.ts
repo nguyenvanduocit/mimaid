@@ -1,20 +1,35 @@
-import { createModelContent, createUserContent, GenerateContentParameters, GenerateContentResponse, GoogleGenAI } from "@google/genai";
+import { streamText, LanguageModel } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { AI_CONFIG } from "./config";
-import { GroundingMetadata } from "./types";
+import { AIProviderType } from "./types";
 import { EventHelpers } from "./events";
 
 /**
- * Handles AI-powered diagram generation using Google Gemini
+ * Get the AI model instance based on provider configuration
+ */
+function getModel(provider: AIProviderType, apiKey: string, modelId: string): LanguageModel {
+  switch (provider) {
+    case "google":
+      return createGoogleGenerativeAI({ apiKey })(modelId);
+    case "openai":
+      return createOpenAI({ apiKey })(modelId);
+    case "anthropic":
+      return createAnthropic({ apiKey })(modelId);
+  }
+}
+
+/**
+ * Handles AI-powered diagram generation using multiple providers via Vercel AI SDK
  */
 export class AIHandler {
-  private client: GoogleGenAI;
   private editor: any;
   private elements: {
     inputField: HTMLTextAreaElement | HTMLInputElement;
     inputArea: HTMLDivElement;
     generationStatus: HTMLSpanElement;
   };
-  private groundingMetadata: GroundingMetadata | null = null;
 
   constructor(
     editor: any,
@@ -22,24 +37,20 @@ export class AIHandler {
       inputField: HTMLTextAreaElement | HTMLInputElement;
       inputArea: HTMLDivElement;
       generationStatus: HTMLSpanElement;
-    }
+    },
   ) {
     this.editor = editor;
     this.elements = elements;
-    this.client = new GoogleGenAI({ apiKey: AI_CONFIG.apiKey });
-    
     this.setupEventListeners();
   }
 
   private setupEventListeners(): void {
-    // Listen for input submissions
-    EventHelpers.safeListen('ui:input:submit', async ({ prompt }) => {
+    EventHelpers.safeListen("ui:input:submit", async ({ prompt }) => {
       this.elements.inputField.value = prompt;
       await this.handleSubmit();
     });
 
-    // Listen for preset selections
-    EventHelpers.safeListen('ui:preset:select', async ({ preset, isModification }) => {
+    EventHelpers.safeListen("ui:preset:select", async ({ preset, isModification }) => {
       let finalPrompt = preset.prompt;
 
       if (isModification && this.editor) {
@@ -70,14 +81,21 @@ Please provide the modified Mermaid diagram code.`;
     try {
       this.startGeneration(prompt);
       const currentCode = this.editor.getValue();
-      const contents = this.buildConversationContents(prompt, currentCode);
-      const parameters = this.buildGenerationParameters(contents);
-      
-      const result = await this.client.models.generateContentStream(parameters);
+      const messages = this.buildMessages(prompt, currentCode);
+
+      const model = getModel(AI_CONFIG.provider, AI_CONFIG.apiKey, AI_CONFIG.model);
+
+      const result = streamText({
+        model,
+        system: this.getSystemPrompt(),
+        messages,
+        temperature: AI_CONFIG.temperature,
+      });
+
       await this.handleStream(result);
-      
+
       inputField.value = "";
-      EventHelpers.safeEmit('ai:complete', { code: this.editor.getValue() });
+      EventHelpers.safeEmit("ai:complete", { code: this.editor.getValue() });
     } catch (error) {
       this.handleGenerationError(error);
     } finally {
@@ -85,33 +103,36 @@ Please provide the modified Mermaid diagram code.`;
     }
   }
 
-  /**
-   * Start the AI generation process
-   */
   private startGeneration(prompt: string): void {
-    EventHelpers.safeEmit('ai:start', { prompt });
-    EventHelpers.safeEmit('app:loading', { isLoading: true });
+    EventHelpers.safeEmit("ai:start", { prompt });
+    EventHelpers.safeEmit("app:loading", { isLoading: true });
     this.setLoadingState(true);
   }
 
   /**
-   * Build conversation contents for AI generation
+   * Build messages array for AI SDK
    */
-  private buildConversationContents(prompt: string, currentCode: string): any[] {
-    const contents = [];
+  private buildMessages(
+    prompt: string,
+    currentCode: string,
+  ): Array<{ role: "user" | "assistant"; content: string }> {
+    const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
 
     if (currentCode) {
-      contents.push(createUserContent([`Current diagram code:\n\`\`\`mermaid\n${currentCode}\n\`\`\``]));
-      contents.push(createModelContent("I can see the current diagram. How would you like me to modify it?"));
+      messages.push({
+        role: "user",
+        content: `Current diagram code:\n\`\`\`mermaid\n${currentCode}\n\`\`\``,
+      });
+      messages.push({
+        role: "assistant",
+        content: "I can see the current diagram. How would you like me to modify it?",
+      });
     }
 
-    contents.push(createUserContent([prompt]));
-    return contents;
+    messages.push({ role: "user", content: prompt });
+    return messages;
   }
 
-  /**
-   * Get the system prompt for AI generation
-   */
   private getSystemPrompt(): string {
     return `You are a Mermaid diagram expert. Your ONLY job is to generate valid Mermaid diagram code - nothing else.
 
@@ -132,8 +153,6 @@ Your Response MUST Follow This Exact Format:
 Core Capabilities:
 - Create any Mermaid diagram type: flowchart, sequence, class, state, ER, journey, pie, quadrant, gitgraph, etc.
 - Modify existing diagrams while preserving structure
-- Use web search for current best practices and real-world examples
-- Analyze URLs to extract diagram-worthy information
 
 Styling Guidelines:
 - ALWAYS use beautiful, vibrant colors via Mermaid's style syntax
@@ -153,140 +172,63 @@ Examples of CORRECT vs INCORRECT:
 Remember: If it's not valid Mermaid syntax, don't include it. When in doubt, keep it simple and use plain text.`;
   }
 
-  /**
-   * Build generation parameters for AI request
-   */
-  private buildGenerationParameters(contents: any[]): GenerateContentParameters {
-    const tools: any[] = [];
-
-    if (AI_CONFIG.enableUrlContext) {
-      tools.push({ urlContext: {} });
-    }
-
-    if (AI_CONFIG.enableGrounding) {
-      tools.push({ googleSearch: {} });
-    }
-
-    return {
-      model: AI_CONFIG.model,
-      contents: contents,
-      config: {
-        ...(tools.length > 0 && { tools }),
-        ...(AI_CONFIG.enableGrounding && AI_CONFIG.dynamicRetrievalThreshold && {
-          dynamicRetrieval: {
-            threshold: AI_CONFIG.dynamicRetrievalThreshold
-          }
-        }),
-        systemInstruction: {
-          parts: [{ text: this.getSystemPrompt() }]
-        },
-        temperature: AI_CONFIG.temperature,
-        maxOutputTokens: AI_CONFIG.maxTokens,
-        thinkingConfig: {
-          thinkingBudget: AI_CONFIG.thinkingBudget || -1
-        }
-      },
-    };
-  }
-
-  /**
-   * Handle generation errors
-   */
   private handleGenerationError(error: unknown): void {
     console.error("Error processing prompt:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to process prompt with AI. Check your API key";
-    
-    EventHelpers.safeEmit('ai:error', { error: errorMessage });
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "Failed to process prompt with AI. Check your API key";
+
+    EventHelpers.safeEmit("ai:error", { error: errorMessage });
   }
 
-  /**
-   * Finish the generation process
-   */
   private finishGeneration(): void {
     this.setLoadingState(false);
-    EventHelpers.safeEmit('app:loading', { isLoading: false });
+    EventHelpers.safeEmit("app:loading", { isLoading: false });
   }
 
-  private async handleStream(stream: AsyncGenerator<GenerateContentResponse, any, any>): Promise<void> {
+  private async handleStream(result: ReturnType<typeof streamText>): Promise<void> {
     let isInsideCodeBlock = false;
     let accumulatedCode = "";
     let tempResponse = "";
 
-    for await (const chunk of stream) {
-      // Capture grounding metadata if available (check if it exists on the chunk)
-      if ('groundingMetadata' in chunk && chunk.groundingMetadata) {
-        this.groundingMetadata = chunk.groundingMetadata as GroundingMetadata;
-        this.displayGroundingInfo(this.groundingMetadata);
-        EventHelpers.safeEmit('ai:grounding', { metadata: this.groundingMetadata });
+    for await (const chunk of result.textStream) {
+      tempResponse += chunk;
+
+      const mermaidMatch = tempResponse.match(/```mermaid\n([\s\S]*?)```/);
+      if (mermaidMatch) {
+        isInsideCodeBlock = true;
+        accumulatedCode = mermaidMatch[1].trim();
+        this.editor.setValue(accumulatedCode);
+        continue;
       }
 
-      if (chunk.text) {
-        tempResponse += chunk.text;
-        
-        const mermaidMatch = tempResponse.match(/```mermaid\n([\s\S]*?)```/);
-        if (mermaidMatch) {
-          isInsideCodeBlock = true;
-          accumulatedCode = mermaidMatch[1].trim();
-          this.editor.setValue(accumulatedCode);
-          continue;
-        }
+      if (tempResponse.includes("```") && isInsideCodeBlock) {
+        isInsideCodeBlock = false;
+        accumulatedCode += tempResponse.replace("```", "");
+        this.editor.setValue(accumulatedCode);
+        break;
+      }
 
-        if (tempResponse.includes("```") && isInsideCodeBlock) {
-          isInsideCodeBlock = false;
-          accumulatedCode += tempResponse.replace("```", "");
-          this.editor.setValue(accumulatedCode);
-          break;
-        }
-
-        if (isInsideCodeBlock) {
-          accumulatedCode += chunk.text;
-          this.editor.setValue(accumulatedCode);
-        }
+      if (isInsideCodeBlock) {
+        accumulatedCode += chunk;
+        this.editor.setValue(accumulatedCode);
       }
     }
   }
 
   private setLoadingState(loading: boolean): void {
     const { inputField, inputArea, generationStatus } = this.elements;
-    
+
     this.editor.updateOptions({ readOnly: loading });
     inputField.disabled = loading;
     inputArea.style.display = loading ? "none" : "flex";
     generationStatus.style.display = loading ? "block" : "none";
     generationStatus.textContent = loading ? "AI is generating..." : "";
     inputField.style.opacity = loading ? "0.5" : "1";
-    
-    // Emit progress event
+
     if (loading) {
-      EventHelpers.safeEmit('ai:progress', { status: 'AI is generating...' });
+      EventHelpers.safeEmit("ai:progress", { status: "AI is generating..." });
     }
   }
-
-  private displayGroundingInfo(metadata: GroundingMetadata): void {
-
-    // Update status to show grounding was used  
-    if (metadata.webSearchQueries?.length || metadata.groundingSources?.length) {
-      const { generationStatus } = this.elements;
-      const status = "✨ AI is generating with real-time information...";
-      generationStatus.textContent = status;
-      EventHelpers.safeEmit('ai:progress', { status });
-    }
-  }
-
-  public getGroundingMetadata(): GroundingMetadata | null {
-    return this.groundingMetadata;
-  }
-
-  public hasGroundingSources(): boolean {
-    return !!(this.groundingMetadata?.groundingSources?.length || this.groundingMetadata?.webSearchQueries?.length);
-  }
-
-  public getSourceUrls(): string[] {
-    return this.groundingMetadata?.groundingSources?.map(source => source.uri) || [];
-  }
-
-  public updateGroundingSettings(_enableGrounding: boolean, _enableUrlContext: boolean, _threshold?: number): void {
-    // This would typically update AI_CONFIG or a local configuration
-    // Implementation would go here when needed
-  }
-} 
+}

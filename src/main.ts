@@ -10,7 +10,9 @@ import {
   CREATION_PRESETS,
   MODIFICATION_PRESETS,
   AI_CONFIG,
+  DEFAULT_MODELS,
 } from "./config";
+import { AIProviderType } from "./types";
 import { AIHandler } from "./ai-handler";
 import { CollaborationHandler } from "./collaboration";
 import {
@@ -169,7 +171,7 @@ class MermaidEditor {
     const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
 
     // Only initialize AI handler if API key is available
-    const apiKey = localStorage.getItem("googleAiApiKey") || "";
+    const apiKey = localStorage.getItem("aiApiKey") || "";
     if (apiKey && apiKey.trim().length > 0) {
       this.aiHandler = new AIHandler(this.editor, {
         inputField,
@@ -283,49 +285,77 @@ class MermaidEditor {
     const settingsBtn = document.querySelector<HTMLButtonElement>("#settings-btn")!;
     const settingsDialog = document.querySelector<HTMLDivElement>("#settings-dialog")!;
     const saveSettingsBtn = document.querySelector<HTMLButtonElement>("#save-settings")!;
+    const providerSelect = document.querySelector<HTMLSelectElement>("#ai-provider")!;
     const apiTokenInput = document.querySelector<HTMLInputElement>("#api-token")!;
     const modelIdInput = document.querySelector<HTMLInputElement>("#model-id")!;
+    const modelHint = document.querySelector<HTMLElement>("#model-hint")!;
 
-    apiTokenInput.value = localStorage.getItem("googleAiApiKey") || "";
-    modelIdInput.value = localStorage.getItem("googleAiModel") || "gemini-2.5-pro";
+    // Model hints per provider
+    const modelHints: Record<AIProviderType, string> = {
+      google: "e.g., gemini-2.5-pro, gemini-2.0-flash",
+      openai: "e.g., gpt-4o, gpt-4-turbo, gpt-3.5-turbo",
+      anthropic: "e.g., claude-sonnet-4-20250514, claude-3-5-sonnet-20241022",
+    };
+
+    // Load saved settings
+    const savedProvider = (localStorage.getItem("aiProvider") as AIProviderType) || "google";
+    providerSelect.value = savedProvider;
+    apiTokenInput.value = localStorage.getItem("aiApiKey") || "";
+    modelIdInput.value = localStorage.getItem("aiModel") || DEFAULT_MODELS[savedProvider];
+    modelIdInput.placeholder = DEFAULT_MODELS[savedProvider];
+    modelHint.textContent = modelHints[savedProvider];
+
+    // Update model hint when provider changes
+    providerSelect.addEventListener("change", () => {
+      const provider = providerSelect.value as AIProviderType;
+      modelIdInput.placeholder = DEFAULT_MODELS[provider];
+      modelHint.textContent = modelHints[provider];
+      // Update model to default if current model doesn't match new provider
+      if (!modelIdInput.value || modelIdInput.value === DEFAULT_MODELS[savedProvider]) {
+        modelIdInput.value = DEFAULT_MODELS[provider];
+      }
+    });
 
     settingsBtn.addEventListener("click", () => {
       EventHelpers.safeEmit("ui:settings:open", {});
       settingsDialog.classList.toggle("hidden");
       if (!settingsDialog.classList.contains("hidden")) {
-        apiTokenInput.focus();
+        providerSelect.focus();
       }
     });
 
     saveSettingsBtn.addEventListener("click", () => {
+      const provider = providerSelect.value as AIProviderType;
       const apiToken = apiTokenInput.value.trim();
-      const modelId = modelIdInput.value.trim() || "gemini-2.5-pro";
-      localStorage.setItem("googleAiApiKey", apiToken);
-      localStorage.setItem("googleAiModel", modelId);
+      const modelId = modelIdInput.value.trim() || DEFAULT_MODELS[provider];
+
+      localStorage.setItem("aiProvider", provider);
+      localStorage.setItem("aiApiKey", apiToken);
+      localStorage.setItem("aiModel", modelId);
+
+      AI_CONFIG.provider = provider;
       AI_CONFIG.apiKey = apiToken;
       AI_CONFIG.model = modelId;
       settingsDialog.classList.add("hidden");
 
       // Emit settings save event
-      EventHelpers.safeEmit("ui:settings:save", { apiKey: apiToken, model: modelId });
+      EventHelpers.safeEmit("ui:settings:save", { provider, apiKey: apiToken, model: modelId });
 
       // Update input area visibility after saving settings
       this.updateInputAreaVisibility();
 
       // Initialize or clear AI handler based on API key availability
       if (apiToken && apiToken.trim().length > 0) {
-        // Only create AI handler if it doesn't exist yet
-        if (!this.aiHandler) {
-          const inputField = document.querySelector<HTMLInputElement>("#input-field");
-          const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
+        // Always recreate AI handler when settings change to pick up new provider
+        const inputField = document.querySelector<HTMLInputElement>("#input-field");
+        const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
 
-          if (inputField) {
-            this.aiHandler = new AIHandler(this.editor, {
-              inputField,
-              inputArea,
-              generationStatus: this.elements.generationStatus,
-            });
-          }
+        if (inputField) {
+          this.aiHandler = new AIHandler(this.editor, {
+            inputField,
+            inputArea,
+            generationStatus: this.elements.generationStatus,
+          });
         }
       } else {
         // Clear AI handler if API key is removed
@@ -821,7 +851,7 @@ class MermaidEditor {
     const presetCard = document.querySelector<HTMLDivElement>("#preset-card");
     const apiKeyWarning = document.querySelector<HTMLDivElement>(".api-key-warning");
     const fixButton = document.querySelector<HTMLButtonElement>("#fix-with-ai-btn");
-    const apiKey = localStorage.getItem("googleAiApiKey") || "";
+    const apiKey = localStorage.getItem("aiApiKey") || "";
 
     // Hide normal input elements
     if (inputField) inputField.style.display = "none";
@@ -863,7 +893,7 @@ class MermaidEditor {
             <line x1="12" y1="9" x2="12" y2="13"></line>
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
           </svg>
-          <span>Set up your Google AI API key in settings to fix errors with AI</span>
+          <span>Set up your AI API key in settings to fix errors with AI</span>
         `;
         inputArea.appendChild(errorWarning);
       } else {
@@ -934,7 +964,7 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     if (this.currentError) return;
 
     const elements = this.getInputAreaElements();
-    const apiKey = localStorage.getItem("googleAiApiKey") || "";
+    const apiKey = localStorage.getItem("aiApiKey") || "";
     const hasApiKey = apiKey.trim().length > 0;
 
     if (hasApiKey) {
@@ -1015,7 +1045,7 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
         <line x1="12" y1="9" x2="12" y2="13"></line>
         <line x1="12" y1="17" x2="12.01" y2="17"></line>
       </svg>
-      <span>Please set up your Google AI API key in settings to use AI features</span>
+      <span>Please set up your AI API key in settings to use AI features</span>
     `;
     inputArea.appendChild(warningDiv);
   }

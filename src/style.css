@@ -417,7 +417,8 @@ body {
   letter-spacing: 0.025em;
 }
 
-.settings-content input {
+.settings-content input,
+.settings-content select {
   padding: 0.875rem 1rem;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
@@ -429,7 +430,8 @@ body {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.settings-content input:focus {
+.settings-content input:focus,
+.settings-content select:focus {
   border-color: #007acc;
   outline: none;
   box-shadow:
@@ -438,7 +440,8 @@ body {
   background: #ffffff;
 }
 
-.settings-content input:hover {
+.settings-content input:hover,
+.settings-content select:hover {
   border-color: #d1d5db;
 }
 

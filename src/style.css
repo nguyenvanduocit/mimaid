@@ -553,8 +553,35 @@ body {
   animation: slideIn 0.3s ease-out forwards;
 }
 
-.settings-saved-message.fade-out {
+.settings-saved-message.fade-out,
+.toast-message.fade-out {
   animation: fadeOut 0.5s ease-out forwards;
+}
+
+/* Toast Messages */
+.toast-message {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 16px 24px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: var(--shadow-medium);
+  z-index: 10000;
+  max-width: 400px;
+  word-break: break-word;
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.toast-success {
+  background: var(--color-sage);
+  color: white;
+}
+
+.toast-error {
+  background: #dc3545;
+  color: white;
 }
 
 @keyframes slideIn {

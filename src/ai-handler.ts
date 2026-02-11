@@ -92,7 +92,13 @@ Please provide the modified Mermaid diagram code.`;
         temperature: AI_CONFIG.temperature,
       });
 
-      await this.handleStream(result);
+      // Consume both the stream and the response promise.
+      // Some providers throw errors in the internal retry chain
+      // that don't propagate through textStream.
+      await Promise.all([
+        this.handleStream(result),
+        result.response,
+      ]);
 
       inputField.value = "";
       EventHelpers.safeEmit("ai:complete", { code: this.editor.getValue() });
@@ -184,32 +190,39 @@ FINAL CHECK: Before outputting, scan for **, *, _, [], \`\` - if found, REMOVE t
   }
 
   private async handleStream(result: ReturnType<typeof streamText>): Promise<void> {
-    let isInsideCodeBlock = false;
-    let accumulatedCode = "";
-    let tempResponse = "";
+    let fullResponse = "";
+    let state: "waiting" | "collecting" | "done" = "waiting";
+    let code = "";
+
+    const OPEN_MARKER = "```mermaid\n";
+    const CLOSE_MARKER = "```";
 
     for await (const chunk of result.textStream) {
-      tempResponse += chunk;
+      fullResponse += chunk;
 
-      const mermaidMatch = tempResponse.match(/```mermaid\n([\s\S]*?)```/);
-      if (mermaidMatch) {
-        isInsideCodeBlock = true;
-        accumulatedCode = mermaidMatch[1].trim();
-        this.editor.setValue(accumulatedCode);
-        continue;
+      if (state === "done") continue;
+
+      if (state === "waiting") {
+        const openIdx = fullResponse.indexOf(OPEN_MARKER);
+        if (openIdx === -1) continue;
+        state = "collecting";
+        code = fullResponse.slice(openIdx + OPEN_MARKER.length);
+      } else {
+        code += chunk;
       }
 
-      if (tempResponse.includes("```") && isInsideCodeBlock) {
-        isInsideCodeBlock = false;
-        accumulatedCode += tempResponse.replace("```", "");
-        this.editor.setValue(accumulatedCode);
-        break;
+      const closeIdx = code.indexOf(CLOSE_MARKER);
+      if (closeIdx !== -1) {
+        code = code.slice(0, closeIdx);
+        state = "done";
       }
 
-      if (isInsideCodeBlock) {
-        accumulatedCode += chunk;
-        this.editor.setValue(accumulatedCode);
-      }
+      this.editor.setValue(code.trim());
+    }
+
+    // If stream ended mid-block, use whatever we collected
+    if (state === "collecting" && code.trim()) {
+      this.editor.setValue(code.trim());
     }
   }
 

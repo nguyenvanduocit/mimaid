@@ -49,10 +49,31 @@ const state: EditorState = {
   isResizing: false,
 };
 
+function setupModalDismiss(
+  modal: HTMLElement,
+  trigger: HTMLElement,
+  hiddenClass = "hidden",
+): void {
+  document.addEventListener("click", (e) => {
+    if (
+      !modal.contains(e.target as Node) &&
+      !trigger.contains(e.target as Node) &&
+      !modal.classList.contains(hiddenClass)
+    ) {
+      modal.classList.add(hiddenClass);
+    }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modal.classList.contains(hiddenClass)) {
+      modal.classList.add(hiddenClass);
+    }
+  });
+}
+
 class MermaidEditor {
   private editor!: any;
   private elements!: EditorElements;
-  private aiHandler!: AIHandler;
+  private aiHandler: AIHandler | null = null;
   private collaborationHandler!: CollaborationHandler;
   private panZoomInstance: any;
   private currentError: string | null = null;
@@ -98,11 +119,7 @@ class MermaidEditor {
       generationStatus: document.querySelector<HTMLSpanElement>("#generation-status")!,
     };
 
-    this.elements.generationStatus = document.querySelector<HTMLSpanElement>("#generation-status")!;
     this.elements.generationStatus.style.display = "none";
-
-    const settingsButton = document.querySelector<HTMLButtonElement>("#settings-btn")!;
-    settingsButton.classList.add("button");
   }
 
   private handleEditorVisibility(): void {
@@ -154,7 +171,6 @@ class MermaidEditor {
 
     // Process any pending error now that editor is ready
     if (this.pendingError) {
-      console.log("[DEBUG] Processing pending error after editor ready");
       this.setErrorMarkers(this.pendingError.message, this.pendingError.code);
       this.pendingError = null;
     }
@@ -193,7 +209,7 @@ class MermaidEditor {
 
     const code = loadDiagramFromURL();
     if (code && code.trim().length > 0) {
-      this.renderDiagram(code);
+      this.renderMermaidDiagram(code);
     }
   }
 
@@ -241,7 +257,7 @@ class MermaidEditor {
   private setupAppEventListeners(): void {
     // Listen for editor changes to trigger diagram rendering
     EventHelpers.safeListen("editor:change", async ({ code }) => {
-      await this.renderDiagram(code);
+      await this.renderMermaidDiagram(code);
     });
 
     // Listen for AI completion to trigger diagram update
@@ -258,6 +274,11 @@ class MermaidEditor {
     EventHelpers.safeListen("app:loading", ({ isLoading }) => {
       // Update global loading state if needed
       document.body.classList.toggle("loading", isLoading);
+    });
+
+    // Listen for AI errors - show toast notification
+    EventHelpers.safeListen("ai:error", ({ error }) => {
+      this.showToast(error, "error");
     });
 
     // Listen for app errors
@@ -429,37 +450,14 @@ class MermaidEditor {
         }
       } else {
         // Clear AI handler if API key is removed
-        this.aiHandler = null as any;
+        this.aiHandler = null;
       }
 
       // Show visual feedback
-      const statusMessage = document.createElement("div");
-      statusMessage.textContent = "Settings saved successfully!";
-      statusMessage.className = "settings-saved-message";
-      document.body.appendChild(statusMessage);
-
-      setTimeout(() => {
-        statusMessage.classList.add("fade-out");
-        setTimeout(() => document.body.removeChild(statusMessage), 500);
-      }, 2000);
+      this.showToast("Settings saved successfully!");
     });
 
-    document.addEventListener("click", (e) => {
-      if (
-        !settingsDialog.contains(e.target as Node) &&
-        !settingsBtn.contains(e.target as Node) &&
-        !settingsDialog.classList.contains("hidden")
-      ) {
-        settingsDialog.classList.add("hidden");
-      }
-    });
-
-    // Close on escape key
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !settingsDialog.classList.contains("hidden")) {
-        settingsDialog.classList.add("hidden");
-      }
-    });
+    setupModalDismiss(settingsDialog, settingsBtn);
   }
 
   private setupResizeListeners(): void {
@@ -608,13 +606,6 @@ class MermaidEditor {
     EventHelpers.safeEmit("editor:error", { error: errorMessage });
   }
 
-  /**
-   * Render diagram (wrapper method for renderMermaidDiagram)
-   */
-  private async renderDiagram(code: string): Promise<void> {
-    await this.renderMermaidDiagram(code);
-  }
-
   private loadInitialState(): void {
     const savedWidth = getStoredEditorWidth();
     if (savedWidth) {
@@ -625,6 +616,18 @@ class MermaidEditor {
   private showError(message: string): void {
     this.elements.errorOverlay.textContent = message;
     this.elements.errorOverlay.style.display = "flex";
+  }
+
+  private showToast(message: string, type: "success" | "error" = "success"): void {
+    const toast = document.createElement("div");
+    toast.textContent = message;
+    toast.className = `toast-message toast-${type}`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add("fade-out");
+      setTimeout(() => document.body.removeChild(toast), 500);
+    }, 4000);
   }
 
   private hideError(): void {
@@ -795,26 +798,11 @@ class MermaidEditor {
    */
   private registerAICodeActionProvider(): void {
     if (!this.monaco || !this.editor) {
-      console.log(
-        "[DEBUG] Cannot register AI code action provider - monaco or editor not available",
-        {
-          monaco: !!this.monaco,
-          editor: !!this.editor,
-        },
-      );
       return;
     }
 
-    console.log("[DEBUG] Registering AI code action provider", {
-      monaco: !!this.monaco,
-      editor: !!this.editor,
-      monacoVersion: this.monaco.editor.VERSION || "unknown",
-    });
-
     const actionProvider = {
-      provideCodeActions: (model: any, range: any, context: any) => {
-        console.log("[DEBUG] provideCodeActions called", { range, context });
-
+      provideCodeActions: (model: any, range: any, _context: any) => {
         // Check if there are any markers (errors) in the current range
         const markers = this.monaco.editor.getModelMarkers({
           resource: model.uri,
@@ -826,8 +814,6 @@ class MermaidEditor {
             marker.endLineNumber <= range.endLineNumber
           );
         });
-
-        console.log("[DEBUG] Markers in range:", markersInRange);
 
         if (markersInRange.length === 0) {
           return { actions: [], dispose: () => {} };
@@ -852,18 +838,15 @@ class MermaidEditor {
     };
 
     // Register the code action provider
-    const disposable1 = this.monaco.languages.registerCodeActionProvider("mermaid", actionProvider);
-    console.log("[DEBUG] Code action provider registered:", !!disposable1);
+    this.monaco.languages.registerCodeActionProvider("mermaid", actionProvider);
 
     // Register the command that will be executed when the action is clicked
-    const disposable2 = this.editor.addCommand(
+    this.editor.addCommand(
       this.monaco.KeyMod.CtrlCmd | this.monaco.KeyCode.Period, // Ctrl/Cmd + .
       () => {
-        console.log("[DEBUG] Quick fix shortcut triggered");
         this.editor.trigger("", "editor.action.quickFix", null);
       },
     );
-    console.log("[DEBUG] Quick fix shortcut registered:", !!disposable2);
 
     // Register the fix command - just emit an event to trigger existing AI fix logic
     const commandId = "mermaid.fixWithAI";
@@ -871,18 +854,15 @@ class MermaidEditor {
     try {
       // Register the command with Monaco's command service
       this.monaco.editor.registerCommand(commandId, () => {
-        console.log("[DEBUG] Fix with AI command triggered");
-
         // Just emit an event to trigger the existing AI fix logic
         EventHelpers.safeEmit("ui:fixWithAI", {});
 
         // Call the existing handleFixWithAI method
         this.handleFixWithAI();
       });
-      console.log("[DEBUG] Monaco command registered:", commandId);
 
       // Also add it as an editor action for context menu and keybindings
-      const actionDisposable = this.editor.addAction({
+      this.editor.addAction({
         id: commandId,
         label: "Fix Mermaid Error with AI",
         keybindings: [
@@ -891,8 +871,6 @@ class MermaidEditor {
         contextMenuGroupId: "navigation",
         contextMenuOrder: 1.5,
         run: () => {
-          console.log("[DEBUG] Fix with AI action triggered");
-
           // Just emit an event to trigger the existing AI fix logic
           EventHelpers.safeEmit("ui:fixWithAI", {});
 
@@ -900,9 +878,8 @@ class MermaidEditor {
           this.handleFixWithAI();
         },
       });
-      console.log("[DEBUG] Editor action registered:", commandId, !!actionDisposable);
     } catch (error) {
-      console.error("[DEBUG] Error registering AI fix command:", error);
+      console.error("Error registering AI fix command:", error);
     }
   }
 
@@ -1356,23 +1333,7 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
       }
     });
 
-    // Close preset card when clicking outside
-    document.addEventListener("click", (e) => {
-      if (
-        !presetCard.contains(e.target as Node) &&
-        !presetButton.contains(e.target as Node) &&
-        !presetCard.classList.contains("hidden")
-      ) {
-        presetCard.classList.add("hidden");
-      }
-    });
-
-    // Close on escape key
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !presetCard.classList.contains("hidden")) {
-        presetCard.classList.add("hidden");
-      }
-    });
+    setupModalDismiss(presetCard, presetButton);
   }
 
   private setupSkillModalListeners(): void {
@@ -1441,23 +1402,7 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
       URL.revokeObjectURL(url);
     });
 
-    // Close modal when clicking outside
-    document.addEventListener("click", (e) => {
-      if (
-        !skillModal.contains(e.target as Node) &&
-        !skillBtn.contains(e.target as Node) &&
-        !skillModal.classList.contains("hidden")
-      ) {
-        skillModal.classList.add("hidden");
-      }
-    });
-
-    // Close on escape key
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !skillModal.classList.contains("hidden")) {
-        skillModal.classList.add("hidden");
-      }
-    });
+    setupModalDismiss(skillModal, skillBtn);
   }
 
   private setupShareModalListeners(): void {
@@ -1550,23 +1495,7 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
       await copyAndShowSuccess(embedUrl, copyEmbedBtn);
     });
 
-    // Close modal when clicking outside
-    document.addEventListener("click", (e) => {
-      if (
-        !shareModal.contains(e.target as Node) &&
-        !shareBtn.contains(e.target as Node) &&
-        !shareModal.classList.contains("hidden")
-      ) {
-        shareModal.classList.add("hidden");
-      }
-    });
-
-    // Close on escape key
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !shareModal.classList.contains("hidden")) {
-        shareModal.classList.add("hidden");
-      }
-    });
+    setupModalDismiss(shareModal, shareBtn);
   }
 }
 

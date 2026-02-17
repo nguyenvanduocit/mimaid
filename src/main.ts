@@ -127,7 +127,8 @@ class MermaidEditor {
     const hideEditor = urlParams.has("hideEditor");
 
     if (hideEditor) {
-      this.hideEditorPane();
+      this.elements.editorPane.classList.remove("visible");
+      this.elements.handle.style.display = "none";
     } else {
       this.showEditorPane();
     }
@@ -138,11 +139,34 @@ class MermaidEditor {
   private showEditorPane(): void {
     this.elements.editorPane.classList.add("visible");
     this.elements.handle.style.display = "block";
+    this.elements.handle.classList.remove("collapsed");
+    this.updateEditorVisibilityParam(false);
   }
 
   private hideEditorPane(): void {
     this.elements.editorPane.classList.remove("visible");
-    this.elements.handle.style.display = "none";
+    this.elements.handle.classList.add("collapsed");
+    this.updateEditorVisibilityParam(true);
+  }
+
+  private updateEditorVisibilityParam(hidden: boolean): void {
+    const url = new URL(window.location.href);
+    if (hidden) {
+      url.searchParams.set("hideEditor", "");
+    } else {
+      url.searchParams.delete("hideEditor");
+    }
+    window.history.replaceState(null, "", url.toString());
+  }
+
+  private toggleEditorPane(): void {
+    const isVisible = this.elements.editorPane.classList.contains("visible");
+    if (isVisible) {
+      this.hideEditorPane();
+    } else {
+      this.showEditorPane();
+      this.editor?.layout();
+    }
   }
 
   private async setupEditor(): Promise<void> {
@@ -306,14 +330,22 @@ class MermaidEditor {
   private setupSettingsListeners(): void {
     const settingsBtn = document.querySelector<HTMLButtonElement>("#settings-btn")!;
     const settingsDialog = document.querySelector<HTMLDivElement>("#settings-dialog")!;
+    const settingsClose = document.querySelector<HTMLButtonElement>("#settings-close")!;
     const saveSettingsBtn = document.querySelector<HTMLButtonElement>("#save-settings")!;
-    const providerSelect = document.querySelector<HTMLSelectElement>("#ai-provider")!;
+    const providerCards = document.querySelectorAll<HTMLButtonElement>(".provider-card");
     const apiTokenInput = document.querySelector<HTMLInputElement>("#api-token")!;
     const modelIdSelect = document.querySelector<HTMLSelectElement>("#model-id")!;
     const modelHint = document.querySelector<HTMLElement>("#model-hint")!;
 
     let modelsFetched = false;
     let currentFetchProvider: AIProviderType | null = null;
+    let selectedProvider: AIProviderType = (localStorage.getItem("aiProvider") as AIProviderType) || "google";
+
+    const API_KEY_PLACEHOLDERS: Record<AIProviderType, string> = {
+      google: "Enter your Google AI API key",
+      openai: "Enter your OpenAI API key",
+      anthropic: "Enter your Anthropic API key",
+    };
 
     const clearSelectOptions = (select: HTMLSelectElement) => {
       while (select.firstChild) {
@@ -328,11 +360,27 @@ class MermaidEditor {
       select.appendChild(option);
     };
 
+    const selectProviderCard = (provider: AIProviderType) => {
+      selectedProvider = provider;
+      providerCards.forEach((card) => {
+        card.classList.toggle("selected", card.dataset.provider === provider);
+      });
+      apiTokenInput.placeholder = API_KEY_PLACEHOLDERS[provider];
+
+      // Reset model fetch state when provider changes
+      modelsFetched = false;
+      clearSelectOptions(modelIdSelect);
+      addSelectOption(modelIdSelect, DEFAULT_MODELS[provider], DEFAULT_MODELS[provider]);
+      modelIdSelect.value = DEFAULT_MODELS[provider];
+      modelHint.textContent = "Click to fetch available models";
+    };
+
     // Load saved settings
-    const savedProvider = (localStorage.getItem("aiProvider") as AIProviderType) || "google";
-    const savedModel = localStorage.getItem("aiModel") || DEFAULT_MODELS[savedProvider];
-    providerSelect.value = savedProvider;
+    const savedModel = localStorage.getItem("aiModel") || DEFAULT_MODELS[selectedProvider];
     apiTokenInput.value = localStorage.getItem("aiApiKey") || "";
+
+    // Set initial provider card selection
+    selectProviderCard(selectedProvider);
 
     // Set initial model option
     clearSelectOptions(modelIdSelect);
@@ -384,21 +432,20 @@ class MermaidEditor {
 
     // Fetch models when clicking on select
     modelIdSelect.addEventListener("focus", () => {
-      const provider = providerSelect.value as AIProviderType;
       const apiKey = apiTokenInput.value.trim();
-      if (!modelsFetched || currentFetchProvider !== provider) {
-        fetchModels(provider, apiKey);
+      if (!modelsFetched || currentFetchProvider !== selectedProvider) {
+        fetchModels(selectedProvider, apiKey);
       }
     });
 
-    // Update when provider changes
-    providerSelect.addEventListener("change", () => {
-      const provider = providerSelect.value as AIProviderType;
-      modelsFetched = false;
-      clearSelectOptions(modelIdSelect);
-      addSelectOption(modelIdSelect, DEFAULT_MODELS[provider], DEFAULT_MODELS[provider]);
-      modelIdSelect.value = DEFAULT_MODELS[provider];
-      modelHint.textContent = "Click to fetch available models";
+    // Handle provider card clicks
+    providerCards.forEach((card) => {
+      card.addEventListener("click", () => {
+        const provider = card.dataset.provider as AIProviderType;
+        if (provider) {
+          selectProviderCard(provider);
+        }
+      });
     });
 
     // Reset fetch state when API key changes
@@ -410,13 +457,14 @@ class MermaidEditor {
     settingsBtn.addEventListener("click", () => {
       EventHelpers.safeEmit("ui:settings:open", {});
       settingsDialog.classList.toggle("hidden");
-      if (!settingsDialog.classList.contains("hidden")) {
-        providerSelect.focus();
-      }
+    });
+
+    settingsClose.addEventListener("click", () => {
+      settingsDialog.classList.add("hidden");
     });
 
     saveSettingsBtn.addEventListener("click", () => {
-      const provider = providerSelect.value as AIProviderType;
+      const provider = selectedProvider;
       const apiToken = apiTokenInput.value.trim();
       const modelId = modelIdSelect.value.trim() || DEFAULT_MODELS[provider];
 
@@ -470,10 +518,18 @@ class MermaidEditor {
       EventHelpers.safeEmit("editor:resize", { width });
     };
 
-    this.elements.handle.addEventListener("mousedown", () => {
+    this.elements.handle.addEventListener("mousedown", (e) => {
+      if (this.elements.handle.classList.contains("collapsed")) return;
+      if ((e.target as Element).closest(".collapse-btn")) return;
       state.isResizing = true;
       document.addEventListener("mousemove", this.handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
+    });
+
+    const collapseBtn = this.elements.handle.querySelector<HTMLButtonElement>(".collapse-btn");
+    collapseBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.toggleEditorPane();
     });
   }
 

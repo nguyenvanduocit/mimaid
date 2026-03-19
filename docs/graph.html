@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mimaid - Function Graph</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0e14;
+    color: #b0bac5;
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---- TOOLBAR ---- */
+  #toolbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px;
+    background: linear-gradient(180deg, #111820 0%, #0f1419 100%);
+    border-bottom: 1px solid #1e2630;
+    flex-shrink: 0; z-index: 10;
+  }
+  #toolbar h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 600;
+    color: #e6edf3; white-space: nowrap;
+    letter-spacing: -0.3px;
+    background: linear-gradient(135deg, #79c0ff 0%, #d2a8ff 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .toolbar-sep { width: 1px; height: 24px; background: #1e2630; flex-shrink: 0; }
+
+  #search-wrap {
+    position: relative; display: flex; align-items: center;
+  }
+  #search-wrap .search-icon {
+    position: absolute; left: 10px;
+    color: #3d4752; font-size: 13px; pointer-events: none;
+  }
+  #search-wrap kbd {
+    position: absolute; right: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: #3d4752;
+    border: 1px solid #1e2630; border-radius: 3px;
+    padding: 1px 5px; pointer-events: none;
+  }
+  #search {
+    background: #0a0e14; border: 1px solid #1e2630; border-radius: 8px;
+    padding: 6px 40px 6px 30px; color: #b0bac5;
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    width: 220px; outline: none; transition: all 0.2s;
+  }
+  #search:focus { border-color: #58a6ff; box-shadow: 0 0 0 3px rgba(56,139,253,0.12); width: 280px; }
+  #search::placeholder { color: #3d4752; }
+
+  .module-toggles { display: flex; gap: 5px; flex-wrap: wrap; margin-left: auto; }
+  .module-btn {
+    padding: 4px 10px; border-radius: 20px;
+    border: 1px solid; font-size: 11px;
+    cursor: pointer; background: transparent;
+    transition: all 0.2s; font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .module-btn:hover { transform: translateY(-1px); filter: brightness(1.2); }
+  .module-btn.inactive { opacity: 0.2; transform: none; }
+
+  .toolbar-actions { display: flex; gap: 4px; margin-left: 8px; }
+  .tool-btn {
+    background: #111820; border: 1px solid #1e2630; border-radius: 6px;
+    color: #536171; padding: 5px 8px; cursor: pointer;
+    font-size: 12px; transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .tool-btn:hover { color: #b0bac5; border-color: #2e3a46; background: #151d27; }
+
+  /* ---- GRAPH ---- */
+  #graph-container { flex: 1; position: relative; }
+  svg { width: 100%; height: 100%; }
+
+  /* ---- TOOLTIP ---- */
+  #tooltip {
+    position: absolute; pointer-events: none;
+    background: rgba(17, 24, 32, 0.95);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid #1e2630; border-radius: 8px;
+    padding: 10px 14px; z-index: 20;
+    opacity: 0; transition: opacity 0.15s;
+    max-width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  #tooltip.visible { opacity: 1; }
+  #tooltip .tt-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; color: #e6edf3; font-weight: 500;
+  }
+  #tooltip .tt-file {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: #536171; margin-top: 2px;
+  }
+  #tooltip .tt-module {
+    font-size: 10px; margin-top: 3px; display: inline-block;
+    padding: 1px 6px; border-radius: 8px;
+  }
+  #tooltip .tt-stats {
+    font-size: 11px; color: #536171; margin-top: 6px;
+    display: flex; gap: 12px;
+  }
+  #tooltip .tt-stats span { color: #8b949e; font-weight: 500; }
+  #tooltip .tt-hint {
+    font-size: 10px; color: #3d4752; margin-top: 6px;
+    border-top: 1px solid #1e2630; padding-top: 5px;
+  }
+
+  /* ---- INFO PANEL ---- */
+  #info-panel {
+    position: absolute; top: 12px; right: 12px; width: 320px;
+    background: rgba(17, 24, 32, 0.88);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid #1e2630; border-radius: 12px;
+    padding: 20px; display: none; z-index: 15;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 0 1px rgba(88,166,255,0.1);
+    max-height: calc(100vh - 140px); overflow-y: auto;
+    transform: translateX(10px); opacity: 0;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+  #info-panel.open { display: block; transform: translateX(0); opacity: 1; }
+  #info-panel h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; color: #e6edf3; font-weight: 500;
+    margin-bottom: 4px; word-break: break-all; line-height: 1.5;
+  }
+  #info-panel .panel-file {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: #536171; margin-bottom: 8px;
+  }
+  #info-panel .close-btn {
+    position: absolute; top: 12px; right: 14px;
+    background: none; border: none; color: #3d4752;
+    cursor: pointer; font-size: 18px; line-height: 1;
+    transition: color 0.15s; border-radius: 4px;
+    width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  }
+  #info-panel .close-btn:hover { color: #b0bac5; background: #1e2630; }
+  .info-section { margin-bottom: 14px; }
+  .info-section h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; text-transform: uppercase; color: #3d4752;
+    margin-bottom: 6px; letter-spacing: 1px;
+  }
+  .info-metric {
+    display: flex; justify-content: space-between;
+    padding: 5px 0; font-size: 12px;
+    border-bottom: 1px solid rgba(30,38,48,0.6);
+  }
+  .info-metric .label { color: #536171; }
+  .info-metric .value { color: #e6edf3; font-weight: 600; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .info-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    font-size: 10px; margin: 2px 2px 2px 0;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .dep-list { font-size: 11px; color: #536171; }
+  .dep-list div { padding: 3px 0; display: flex; align-items: center; gap: 2px; }
+  .dep-list .dep-arrow { color: #3d4752; margin: 0 4px; font-size: 10px; }
+  .dep-list .dep-name {
+    color: #8b949e; cursor: pointer; transition: color 0.15s;
+  }
+  .dep-list .dep-name:hover { color: #e6edf3; }
+
+  /* ---- MINIMAP ---- */
+  #minimap {
+    position: absolute; bottom: 56px; right: 12px;
+    width: 160px; height: 100px;
+    background: rgba(17, 24, 32, 0.85);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid #1e2630; border-radius: 8px;
+    overflow: hidden; z-index: 5;
+    cursor: pointer;
+  }
+  #minimap svg { width: 100%; height: 100%; }
+  #minimap .viewport-rect {
+    fill: rgba(88,166,255,0.08);
+    stroke: #58a6ff; stroke-width: 1.5; stroke-opacity: 0.5;
+  }
+
+  /* ---- STATS BAR ---- */
+  #stats-bar {
+    display: flex; gap: 24px;
+    padding: 8px 16px;
+    background: linear-gradient(180deg, #0f1419 0%, #111820 100%);
+    border-top: 1px solid #1e2630;
+    flex-shrink: 0; font-size: 12px;
+  }
+  .stat { display: flex; gap: 6px; align-items: center; }
+  .stat .stat-label { color: #3d4752; font-size: 11px; }
+  .stat .stat-value {
+    color: #e6edf3; font-weight: 600;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  }
+  .stat .stat-value.warn { color: #f0883e; }
+
+  /* ---- LEGEND ---- */
+  .legend {
+    position: absolute; bottom: 56px; left: 12px;
+    background: rgba(17, 24, 32, 0.85);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid #1e2630; border-radius: 8px;
+    padding: 10px 14px; font-size: 11px; z-index: 5;
+    transition: opacity 0.2s;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .legend-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; color: #3d4752; margin-left: auto;
+  }
+
+  /* ---- SVG ELEMENTS ---- */
+  .node-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; fill: #8b949e;
+    pointer-events: none; text-anchor: middle; font-weight: 400;
+    transition: fill-opacity 0.3s;
+  }
+  .link { fill: none; transition: stroke-opacity 0.3s, stroke 0.3s; }
+  circle { transition: fill-opacity 0.3s, stroke-opacity 0.3s; }
+
+  /* ---- HUB PULSE ---- */
+  @keyframes hub-ring {
+    0% { stroke-opacity: 0.6; r: inherit; }
+    100% { stroke-opacity: 0; }
+  }
+
+  /* ---- KEYBOARD HINT ---- */
+  #keyboard-hint {
+    position: absolute; bottom: 56px; left: 50%; transform: translateX(-50%);
+    background: rgba(17, 24, 32, 0.9); border: 1px solid #1e2630;
+    border-radius: 8px; padding: 6px 14px;
+    font-size: 11px; color: #3d4752; z-index: 5;
+    display: flex; gap: 16px;
+    backdrop-filter: blur(8px);
+    opacity: 0; transition: opacity 0.5s;
+    pointer-events: none;
+  }
+  #keyboard-hint.show { opacity: 1; }
+  #keyboard-hint kbd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; background: #1e2630; border-radius: 3px;
+    padding: 1px 5px; margin-right: 4px; color: #536171;
+  }
+
+  /* ---- SCROLLBAR ---- */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1e2630; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2e3a46; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <h1>Mimaid Function Graph</h1>
+  <div class="toolbar-sep"></div>
+  <div id="search-wrap">
+    <span class="search-icon">&#x1F50D;</span>
+    <input type="text" id="search" placeholder="Search functions..." />
+    <kbd>/</kbd>
+  </div>
+  <div class="module-toggles" id="module-toggles"></div>
+  <div class="toolbar-actions">
+    <button class="tool-btn" id="btn-fit" title="Fit to view (F)">&#x2922; Fit</button>
+    <button class="tool-btn" id="btn-lock" title="Toggle layout lock (L)">&#x1F513;</button>
+  </div>
+</div>
+
+<div id="graph-container">
+  <svg id="graph"></svg>
+  <div id="tooltip"></div>
+  <div id="info-panel">
+    <button class="close-btn" onclick="closePanel()">&times;</button>
+    <div id="info-content"></div>
+  </div>
+  <div class="legend" id="legend"></div>
+  <div id="minimap"><svg id="minimap-svg"></svg></div>
+  <div id="keyboard-hint">
+    <span><kbd>/</kbd> Search</span>
+    <span><kbd>Esc</kbd> Close</span>
+    <span><kbd>F</kbd> Fit view</span>
+    <span><kbd>L</kbd> Lock layout</span>
+  </div>
+</div>
+
+<div id="stats-bar"></div>
+
+<script>
+// ============ FUNCTION-LEVEL DATA ============
+// Each node is a function/method. id = "file::name", module = logical group
+const functionsData = [
+  // --- Utilities (src/utils.ts) ---
+  { id: "utils::debounce", name: "debounce", file: "src/utils.ts", module: "Utilities", type: "function" },
+  { id: "utils::loadDiagramFromURL", name: "loadDiagramFromURL", file: "src/utils.ts", module: "Utilities", type: "function" },
+  { id: "utils::generateDiagramHash", name: "generateDiagramHash", file: "src/utils.ts", module: "Utilities", type: "function" },
+  { id: "utils::getStoredEditorWidth", name: "getStoredEditorWidth", file: "src/utils.ts", module: "Utilities", type: "function" },
+  { id: "utils::setStoredEditorWidth", name: "setStoredEditorWidth", file: "src/utils.ts", module: "Utilities", type: "function" },
+  { id: "utils::getRoomIdFromURL", name: "getRoomIdFromURL", file: "src/utils.ts", module: "Utilities", type: "function" },
+  { id: "utils::getUserNameFromURL", name: "getUserNameFromURL", file: "src/utils.ts", module: "Utilities", type: "function" },
+  { id: "utils::getRandomColor", name: "getRandomColor", file: "src/utils.ts", module: "Utilities", type: "function" },
+  { id: "utils::parseMermaidError", name: "parseMermaidError", file: "src/utils.ts", module: "Utilities", type: "function" },
+  { id: "utils::inferErrorLine", name: "inferErrorLine", file: "src/utils.ts", module: "Utilities", type: "internal" },
+  { id: "utils::hasCommonSyntaxIssues", name: "hasCommonSyntaxIssues", file: "src/utils.ts", module: "Utilities", type: "internal" },
+  { id: "utils::cleanErrorMessage", name: "cleanErrorMessage", file: "src/utils.ts", module: "Utilities", type: "internal" },
+
+  // --- Events (src/events.ts) ---
+  { id: "events::safeEmit", name: "safeEmit", file: "src/events.ts", module: "Events", type: "function" },
+  { id: "events::safeListen", name: "safeListen", file: "src/events.ts", module: "Events", type: "function" },
+  { id: "events::once", name: "once", file: "src/events.ts", module: "Events", type: "function" },
+
+  // --- AI Handler (src/ai-handler.ts) ---
+  { id: "ai::getModel", name: "getModel", file: "src/ai-handler.ts", module: "AI Handler", type: "function" },
+  { id: "ai::setupEventListeners", name: "AI.setupListeners", file: "src/ai-handler.ts", module: "AI Handler", type: "method" },
+  { id: "ai::handleSubmit", name: "AI.handleSubmit", file: "src/ai-handler.ts", module: "AI Handler", type: "method" },
+  { id: "ai::buildMessages", name: "AI.buildMessages", file: "src/ai-handler.ts", module: "AI Handler", type: "method" },
+  { id: "ai::startGeneration", name: "AI.startGeneration", file: "src/ai-handler.ts", module: "AI Handler", type: "method" },
+  { id: "ai::getSystemPrompt", name: "AI.getSystemPrompt", file: "src/ai-handler.ts", module: "AI Handler", type: "method" },
+  { id: "ai::handleError", name: "AI.handleError", file: "src/ai-handler.ts", module: "AI Handler", type: "method" },
+  { id: "ai::finishGeneration", name: "AI.finishGeneration", file: "src/ai-handler.ts", module: "AI Handler", type: "method" },
+  { id: "ai::handleStream", name: "AI.handleStream", file: "src/ai-handler.ts", module: "AI Handler", type: "method" },
+  { id: "ai::setLoadingState", name: "AI.setLoadingState", file: "src/ai-handler.ts", module: "AI Handler", type: "method" },
+
+  // --- Collaboration (src/collaboration.ts) ---
+  { id: "collab::setupEventListeners", name: "Collab.setupListeners", file: "src/collaboration.ts", module: "Collaboration", type: "method" },
+  { id: "collab::setup", name: "Collab.setup", file: "src/collaboration.ts", module: "Collaboration", type: "method" },
+  { id: "collab::connectToRoom", name: "Collab.connectToRoom", file: "src/collaboration.ts", module: "Collaboration", type: "method" },
+  { id: "collab::disconnect", name: "Collab.disconnect", file: "src/collaboration.ts", module: "Collaboration", type: "method" },
+
+  // --- Editor Core (src/main.ts) ---
+  { id: "core::loadMonaco", name: "loadMonaco", file: "src/main.ts", module: "Editor Core", type: "function" },
+  { id: "core::setupModalDismiss", name: "setupModalDismiss", file: "src/main.ts", module: "Editor Core", type: "function" },
+  { id: "core::initialize", name: "initialize", file: "src/main.ts", module: "Editor Core", type: "method" },
+  { id: "core::initializeElements", name: "initializeElements", file: "src/main.ts", module: "Editor Core", type: "method" },
+  { id: "core::setupEditor", name: "setupEditor", file: "src/main.ts", module: "Editor Core", type: "method" },
+  { id: "core::setupPreviewPane", name: "setupPreviewPane", file: "src/main.ts", module: "Editor Core", type: "method" },
+  { id: "core::setupEventListeners", name: "setupEventListeners", file: "src/main.ts", module: "Editor Core", type: "method" },
+  { id: "core::setupSettingsModal", name: "setupSettingsModal", file: "src/main.ts", module: "Editor Core", type: "method" },
+  { id: "core::setupInputModal", name: "setupInputModal", file: "src/main.ts", module: "Editor Core", type: "method" },
+  { id: "core::setupCollaboration", name: "setupCollaboration", file: "src/main.ts", module: "Editor Core", type: "method" },
+  { id: "core::handleEditorChange", name: "handleEditorChange", file: "src/main.ts", module: "Editor Core", type: "method" },
+  { id: "core::handleZoom", name: "handleZoom", file: "src/main.ts", module: "Editor Core", type: "method" },
+  { id: "core::updateEditorWidth", name: "updateEditorWidth", file: "src/main.ts", module: "Editor Core", type: "method" },
+
+  // --- Rendering (src/main.ts) ---
+  { id: "render::renderDiagram", name: "renderDiagram", file: "src/main.ts", module: "Rendering", type: "method" },
+  { id: "render::setupPanZoom", name: "setupPanZoom", file: "src/main.ts", module: "Rendering", type: "method" },
+  { id: "render::setupResizeListeners", name: "setupResizeListeners", file: "src/main.ts", module: "Rendering", type: "method" },
+  { id: "render::showErrorOverlay", name: "showErrorOverlay", file: "src/main.ts", module: "Rendering", type: "method" },
+  { id: "render::hideErrorOverlay", name: "hideErrorOverlay", file: "src/main.ts", module: "Rendering", type: "method" },
+
+  // --- Error Handling (src/main.ts) ---
+  { id: "errors::showFixWithAI", name: "showFixWithAI", file: "src/main.ts", module: "Error Handling", type: "method" },
+  { id: "errors::handleFixWithAI", name: "handleFixWithAI", file: "src/main.ts", module: "Error Handling", type: "method" },
+  { id: "errors::registerAICodeAction", name: "registerAICodeAction", file: "src/main.ts", module: "Error Handling", type: "method" },
+  { id: "errors::showError", name: "showError", file: "src/main.ts", module: "Error Handling", type: "method" },
+  { id: "errors::hideError", name: "hideError", file: "src/main.ts", module: "Error Handling", type: "method" },
+  { id: "errors::emitErrorEvents", name: "emitErrorEvents", file: "src/main.ts", module: "Error Handling", type: "method" },
+  { id: "errors::setErrorMarkers", name: "setErrorMarkers", file: "src/main.ts", module: "Error Handling", type: "method" },
+  { id: "errors::clearErrorMarkers", name: "clearErrorMarkers", file: "src/main.ts", module: "Error Handling", type: "method" },
+
+  // --- Settings (src/main.ts) ---
+  { id: "settings::setupSettingsListeners", name: "setupSettingsListeners", file: "src/main.ts", module: "Settings", type: "method" },
+  { id: "settings::showApiKeyWarning", name: "showApiKeyWarning", file: "src/main.ts", module: "Settings", type: "method" },
+  { id: "settings::hideApiKeyWarning", name: "hideApiKeyWarning", file: "src/main.ts", module: "Settings", type: "method" },
+  { id: "settings::fetchModelsForProvider", name: "fetchModelsForProvider", file: "src/main.ts", module: "Settings", type: "method" },
+  { id: "settings::getAnthropicModels", name: "getAnthropicModels", file: "src/main.ts", module: "Settings", type: "method" },
+
+  // --- Presets (src/main.ts) ---
+  { id: "presets::populatePresetGrid", name: "populatePresetGrid", file: "src/main.ts", module: "Presets", type: "method" },
+  { id: "presets::setupPresets", name: "setupPresets", file: "src/main.ts", module: "Presets", type: "method" },
+  { id: "presets::createPresetButton", name: "createPresetButton", file: "src/main.ts", module: "Presets", type: "method" },
+  { id: "presets::createPresetCard", name: "createPresetCard", file: "src/main.ts", module: "Presets", type: "method" },
+  { id: "presets::hasEditorContent", name: "hasEditorContent", file: "src/main.ts", module: "Presets", type: "method" },
+
+  // --- UI & Layout (src/main.ts) ---
+  { id: "ui::showEditorPane", name: "showEditorPane", file: "src/main.ts", module: "UI & Layout", type: "method" },
+  { id: "ui::hideEditorPane", name: "hideEditorPane", file: "src/main.ts", module: "UI & Layout", type: "method" },
+  { id: "ui::toggleEditorPane", name: "toggleEditorPane", file: "src/main.ts", module: "UI & Layout", type: "method" },
+  { id: "ui::setupShareModal", name: "setupShareModal", file: "src/main.ts", module: "UI & Layout", type: "method" },
+  { id: "ui::showToast", name: "showToast", file: "src/main.ts", module: "UI & Layout", type: "method" },
+
+  // --- Input (src/main.ts) ---
+  { id: "input::setupInputListeners", name: "setupInputListeners", file: "src/main.ts", module: "Input", type: "method" },
+  { id: "input::ensureInputField", name: "ensureInputField", file: "src/main.ts", module: "Input", type: "method" },
+  { id: "input::createInputField", name: "createInputField", file: "src/main.ts", module: "Input", type: "method" },
+  { id: "input::showAIInputElements", name: "showAIInputElements", file: "src/main.ts", module: "Input", type: "method" },
+  { id: "input::hideInputElements", name: "hideInputElements", file: "src/main.ts", module: "Input", type: "method" },
+
+  // --- Configuration (src/config.ts) ---
+  { id: "config::EDITOR_CONFIG", name: "EDITOR_CONFIG", file: "src/config.ts", module: "Configuration", type: "constant" },
+  { id: "config::AI_CONFIG", name: "AI_CONFIG", file: "src/config.ts", module: "Configuration", type: "constant" },
+  { id: "config::MERMAID_CONFIG", name: "MERMAID_CONFIG", file: "src/config.ts", module: "Configuration", type: "constant" },
+  { id: "config::CREATION_PRESETS", name: "CREATION_PRESETS", file: "src/config.ts", module: "Configuration", type: "constant" },
+  { id: "config::MODIFICATION_PRESETS", name: "MODIFICATION_PRESETS", file: "src/config.ts", module: "Configuration", type: "constant" },
+
+  // --- Monaco Language (src/configMermaidLanguage.ts) ---
+  { id: "lang::configureMermaidLanguage", name: "configureMermaidLanguage", file: "src/configMermaidLanguage.ts", module: "Monaco Language", type: "function" },
+];
+
+// Function-to-function call edges
+const edgesData = [
+  // === Internal utils.ts calls ===
+  { source: "utils::parseMermaidError", target: "utils::inferErrorLine" },
+  { source: "utils::parseMermaidError", target: "utils::cleanErrorMessage" },
+  { source: "utils::inferErrorLine", target: "utils::hasCommonSyntaxIssues" },
+
+  // === AI Handler internal calls ===
+  { source: "ai::setupEventListeners", target: "ai::handleSubmit" },
+  { source: "ai::handleSubmit", target: "ai::startGeneration" },
+  { source: "ai::handleSubmit", target: "ai::buildMessages" },
+  { source: "ai::handleSubmit", target: "ai::getModel" },
+  { source: "ai::handleSubmit", target: "ai::getSystemPrompt" },
+  { source: "ai::handleSubmit", target: "ai::handleStream" },
+  { source: "ai::handleSubmit", target: "ai::handleError" },
+  { source: "ai::handleSubmit", target: "ai::finishGeneration" },
+  { source: "ai::startGeneration", target: "ai::setLoadingState" },
+  { source: "ai::finishGeneration", target: "ai::setLoadingState" },
+
+  // === AI Handler → Events ===
+  { source: "ai::setupEventListeners", target: "events::safeListen" },
+  { source: "ai::handleSubmit", target: "events::safeEmit" },
+  { source: "ai::startGeneration", target: "events::safeEmit" },
+  { source: "ai::handleError", target: "events::safeEmit" },
+  { source: "ai::finishGeneration", target: "events::safeEmit" },
+
+  // === Collaboration internal calls ===
+  { source: "collab::setupEventListeners", target: "collab::connectToRoom" },
+  { source: "collab::setupEventListeners", target: "collab::disconnect" },
+
+  // === Collaboration → Events ===
+  { source: "collab::setupEventListeners", target: "events::safeListen" },
+  { source: "collab::setup", target: "events::safeEmit" },
+  { source: "collab::connectToRoom", target: "events::safeEmit" },
+
+  // === Collaboration → Utils ===
+  { source: "collab::setup", target: "utils::getRoomIdFromURL" },
+  { source: "collab::setup", target: "utils::getUserNameFromURL" },
+  { source: "collab::connectToRoom", target: "utils::getRandomColor" },
+
+  // === Core → initialize orchestration ===
+  { source: "core::initialize", target: "core::initializeElements" },
+  { source: "core::initialize", target: "core::setupEditor" },
+  { source: "core::initialize", target: "core::setupPreviewPane" },
+  { source: "core::initialize", target: "core::setupEventListeners" },
+  { source: "core::initialize", target: "core::setupSettingsModal" },
+  { source: "core::initialize", target: "core::setupInputModal" },
+  { source: "core::initialize", target: "core::setupCollaboration" },
+  { source: "core::initialize", target: "render::renderDiagram" },
+  { source: "core::initialize", target: "utils::loadDiagramFromURL" },
+  { source: "core::initialize", target: "events::safeEmit" },
+
+  // === Core → sub-initializers ===
+  { source: "core::setupEditor", target: "core::loadMonaco" },
+  { source: "core::setupEditor", target: "utils::loadDiagramFromURL" },
+  { source: "core::setupEditor", target: "events::safeEmit" },
+  { source: "core::loadMonaco", target: "lang::configureMermaidLanguage" },
+  { source: "core::setupPreviewPane", target: "utils::debounce" },
+  { source: "core::setupPreviewPane", target: "render::renderDiagram" },
+  { source: "core::setupEventListeners", target: "events::safeListen" },
+  { source: "core::setupSettingsModal", target: "core::setupModalDismiss" },
+  { source: "core::setupSettingsModal", target: "events::safeListen" },
+  { source: "core::setupSettingsModal", target: "events::safeEmit" },
+  { source: "core::setupInputModal", target: "core::setupModalDismiss" },
+  { source: "core::setupInputModal", target: "events::safeListen" },
+  { source: "core::setupInputModal", target: "events::safeEmit" },
+  { source: "core::setupCollaboration", target: "collab::setup" },
+
+  // === Core → AI Handler (instantiation) ===
+  { source: "core::initialize", target: "ai::setupEventListeners" },
+
+  // === Core internal calls ===
+  { source: "core::handleEditorChange", target: "render::renderDiagram" },
+  { source: "core::handleZoom", target: "events::safeEmit" },
+  { source: "core::updateEditorWidth", target: "utils::setStoredEditorWidth" },
+
+  // === Rendering ===
+  { source: "render::renderDiagram", target: "render::hideErrorOverlay" },
+  { source: "render::renderDiagram", target: "render::showErrorOverlay" },
+  { source: "render::renderDiagram", target: "render::setupPanZoom" },
+  { source: "render::renderDiagram", target: "utils::generateDiagramHash" },
+  { source: "render::renderDiagram", target: "utils::parseMermaidError" },
+  { source: "render::renderDiagram", target: "events::safeEmit" },
+  { source: "render::renderDiagram", target: "errors::showError" },
+  { source: "render::renderDiagram", target: "errors::setErrorMarkers" },
+
+  // === Error Handling ===
+  { source: "errors::showFixWithAI", target: "events::safeEmit" },
+  { source: "errors::handleFixWithAI", target: "events::safeEmit" },
+  { source: "errors::emitErrorEvents", target: "events::safeEmit" },
+  { source: "errors::showError", target: "errors::emitErrorEvents" },
+  { source: "errors::showError", target: "errors::setErrorMarkers" },
+  { source: "errors::showError", target: "errors::showFixWithAI" },
+  { source: "errors::hideError", target: "errors::clearErrorMarkers" },
+  { source: "errors::setErrorMarkers", target: "utils::parseMermaidError" },
+  { source: "errors::registerAICodeAction", target: "errors::handleFixWithAI" },
+
+  // === Settings ===
+  { source: "settings::setupSettingsListeners", target: "events::safeListen" },
+  { source: "settings::setupSettingsListeners", target: "events::safeEmit" },
+  { source: "settings::setupSettingsListeners", target: "settings::fetchModelsForProvider" },
+  { source: "settings::setupSettingsListeners", target: "settings::showApiKeyWarning" },
+  { source: "settings::setupSettingsListeners", target: "settings::hideApiKeyWarning" },
+  { source: "settings::fetchModelsForProvider", target: "settings::getAnthropicModels" },
+
+  // === Presets ===
+  { source: "presets::setupPresets", target: "presets::populatePresetGrid" },
+  { source: "presets::setupPresets", target: "presets::hasEditorContent" },
+  { source: "presets::populatePresetGrid", target: "presets::createPresetButton" },
+  { source: "presets::populatePresetGrid", target: "presets::createPresetCard" },
+  { source: "presets::setupPresets", target: "config::CREATION_PRESETS" },
+  { source: "presets::setupPresets", target: "config::MODIFICATION_PRESETS" },
+
+  // === UI & Layout ===
+  { source: "ui::toggleEditorPane", target: "ui::showEditorPane" },
+  { source: "ui::toggleEditorPane", target: "ui::hideEditorPane" },
+  { source: "ui::toggleEditorPane", target: "events::safeEmit" },
+  { source: "ui::showEditorPane", target: "events::safeEmit" },
+  { source: "ui::hideEditorPane", target: "events::safeEmit" },
+
+  // === Input ===
+  { source: "input::setupInputListeners", target: "events::safeListen" },
+  { source: "input::setupInputListeners", target: "input::ensureInputField" },
+  { source: "input::ensureInputField", target: "input::createInputField" },
+  { source: "input::setupInputListeners", target: "input::showAIInputElements" },
+  { source: "input::setupInputListeners", target: "input::hideInputElements" },
+
+  // === Core → Settings/Presets/UI/Input (wiring) ===
+  { source: "core::setupEventListeners", target: "settings::setupSettingsListeners" },
+  { source: "core::setupEventListeners", target: "presets::setupPresets" },
+  { source: "core::setupEventListeners", target: "input::setupInputListeners" },
+  { source: "core::setupEventListeners", target: "ui::toggleEditorPane" },
+  { source: "core::setupEventListeners", target: "render::setupResizeListeners" },
+  { source: "core::setupEventListeners", target: "errors::registerAICodeAction" },
+
+  // === Config consumers ===
+  { source: "core::setupEditor", target: "config::EDITOR_CONFIG" },
+  { source: "ai::getSystemPrompt", target: "config::AI_CONFIG" },
+  { source: "render::renderDiagram", target: "config::MERMAID_CONFIG" },
+];
+
+// ============ MODULE DEFINITIONS ============
+const moduleConfig = {
+  "Editor Core":      { color: "#58a6ff" },
+  "Rendering":        { color: "#3fb950" },
+  "Error Handling":   { color: "#da3633" },
+  "Settings":         { color: "#a5d6ff" },
+  "Presets":          { color: "#d2a8ff" },
+  "UI & Layout":      { color: "#f0883e" },
+  "Input":            { color: "#ff9bce" },
+  "AI Handler":       { color: "#f78166" },
+  "Collaboration":    { color: "#bc8cff" },
+  "Events":           { color: "#7ee787" },
+  "Utilities":        { color: "#79c0ff" },
+  "Configuration":    { color: "#ffa657" },
+  "Monaco Language":  { color: "#e3b341" }
+};
+
+// ============ BUILD GRAPH DATA ============
+// Compute in/out degree for hub detection
+const outCount = {}, inCount = {};
+for (const e of edgesData) {
+  outCount[e.source] = (outCount[e.source] || 0) + 1;
+  inCount[e.target] = (inCount[e.target] || 0) + 1;
+}
+
+const nodes = functionsData.map(fn => {
+  const mod = fn.module;
+  const inc = inCount[fn.id] || 0;
+  const outc = outCount[fn.id] || 0;
+  const isHub = inc >= 4;
+  const isConst = fn.type === "constant";
+  const isInternal = fn.type === "internal";
+  return {
+    id: fn.id, name: fn.name, file: fn.file, module: mod, fnType: fn.type,
+    color: moduleConfig[mod]?.color || "#3d4752",
+    inDegree: inc, outDegree: outc,
+    radius: isConst ? 6 : isInternal ? 7 : Math.max(8, Math.min(22, 6 + (inc + outc) * 1.2)),
+    isHub: isHub
+  };
+});
+
+const links = edgesData.map(e => ({ source: e.source, target: e.target }));
+
+// Compute detailed deps
+const outDeps = {}, inDeps = {};
+for (const e of edgesData) {
+  if (!outDeps[e.source]) outDeps[e.source] = [];
+  outDeps[e.source].push(e.target);
+  if (!inDeps[e.target]) inDeps[e.target] = [];
+  inDeps[e.target].push(e.source);
+}
+
+// Module visibility
+const moduleVisible = {};
+for (const mod of Object.keys(moduleConfig)) moduleVisible[mod] = true;
+
+// Count functions per module
+const moduleFnCount = {};
+for (const n of nodes) moduleFnCount[n.module] = (moduleFnCount[n.module] || 0) + 1;
+
+// ============ RENDER ============
+const width = window.innerWidth;
+const height = window.innerHeight - 90;
+let layoutLocked = false;
+
+const svg = d3.select("#graph").attr("width", width).attr("height", height);
+const defs = svg.append("defs");
+
+// Arrow markers per module color
+for (const [mod, cfg] of Object.entries(moduleConfig)) {
+  defs.append("marker")
+    .attr("id", "arrow-" + mod.replace(/[\s&]+/g, "-"))
+    .attr("viewBox", "0 -4 10 8").attr("refX", 14).attr("refY", 0)
+    .attr("markerWidth", 4).attr("markerHeight", 4).attr("orient", "auto")
+    .append("path").attr("d", "M0,-3L8,0L0,3")
+    .attr("fill", cfg.color).attr("fill-opacity", 0.5);
+}
+defs.append("marker").attr("id", "arrowhead")
+  .attr("viewBox", "0 -4 10 8").attr("refX", 14).attr("refY", 0)
+  .attr("markerWidth", 4).attr("markerHeight", 4).attr("orient", "auto")
+  .append("path").attr("d", "M0,-3L8,0L0,3").attr("fill", "#3d4752");
+
+// Glow filter for hubs
+const glowFilter = defs.append("filter").attr("id", "hub-glow")
+  .attr("x", "-50%").attr("y", "-50%").attr("width", "200%").attr("height", "200%");
+glowFilter.append("feGaussianBlur").attr("stdDeviation", "3").attr("result", "blur");
+glowFilter.append("feFlood").attr("flood-color", "#7ee787").attr("flood-opacity", "0.5").attr("result", "color");
+glowFilter.append("feComposite").attr("in", "color").attr("in2", "blur").attr("operator", "in").attr("result", "shadow");
+const glowMerge = glowFilter.append("feMerge");
+glowMerge.append("feMergeNode").attr("in", "shadow");
+glowMerge.append("feMergeNode").attr("in", "SourceGraphic");
+
+const g = svg.append("g");
+
+const zoom = d3.zoom().scaleExtent([0.1, 8])
+  .on("zoom", (event) => { g.attr("transform", event.transform); updateMinimap(); });
+svg.call(zoom);
+
+// Layer groups
+const hullGroup = g.append("g").attr("class", "hulls");
+const linkGroup = g.append("g").attr("class", "links");
+const nodeGroup = g.append("g").attr("class", "nodes");
+const labelGroup = g.append("g").attr("class", "labels");
+
+// Links
+const linkElements = linkGroup.selectAll("path")
+  .data(links).join("path").attr("class", "link")
+  .attr("stroke", d => {
+    const sid = typeof d.source === "object" ? d.source.id : d.source;
+    const srcNode = nodes.find(n => n.id === sid);
+    return srcNode ? srcNode.color : "#1e2630";
+  })
+  .attr("stroke-opacity", 0.12)
+  .attr("stroke-width", 1)
+  .attr("marker-end", d => {
+    const sid = typeof d.source === "object" ? d.source.id : d.source;
+    const srcNode = nodes.find(n => n.id === sid);
+    return srcNode ? "url(#arrow-" + srcNode.module.replace(/[\s&]+/g, "-") + ")" : "url(#arrowhead)";
+  });
+
+// Nodes
+const nodeElements = nodeGroup.selectAll("circle")
+  .data(nodes).join("circle")
+  .attr("r", d => d.radius)
+  .attr("fill", d => d.color)
+  .attr("fill-opacity", d => d.fnType === "constant" ? 0.4 : d.fnType === "internal" ? 0.5 : 0.8)
+  .attr("stroke", d => d.isHub ? "#7ee787" : d.color)
+  .attr("stroke-width", d => d.isHub ? 2.5 : 1)
+  .attr("stroke-opacity", d => d.isHub ? 0.9 : 0.3)
+  .attr("filter", d => d.isHub ? "url(#hub-glow)" : null)
+  .attr("cursor", "pointer")
+  .on("click", (event, d) => { event.stopPropagation(); showInfoPanel(d); lockHighlight(d); })
+  .on("dblclick", (event, d) => { event.stopPropagation(); zoomToNode(d); })
+  .on("mouseover", (event, d) => { if (!highlightLocked) applyHighlight(d); showTooltip(event, d); })
+  .on("mousemove", (event) => moveTooltip(event))
+  .on("mouseout", () => { if (!highlightLocked) resetHighlight(); hideTooltip(); })
+  .call(d3.drag().on("start", dragStarted).on("drag", dragged).on("end", dragEnded));
+
+// Hub pulse rings
+nodeGroup.selectAll(".hub-ring")
+  .data(nodes.filter(n => n.isHub)).join("circle")
+  .attr("class", "hub-ring")
+  .attr("r", d => d.radius + 4)
+  .attr("fill", "none")
+  .attr("stroke", "#7ee787")
+  .attr("stroke-width", 1.5)
+  .attr("pointer-events", "none")
+  .attr("opacity", 0);
+
+const labelElements = labelGroup.selectAll("text")
+  .data(nodes).join("text")
+  .attr("class", "node-label").attr("dy", d => d.radius + 12)
+  .text(d => d.name.replace(/^(AI\.|Collab\.)/, ''));
+
+svg.on("click", () => { closePanel(); unlockHighlight(); });
+
+// Force simulation with module clustering
+const moduleCenters = {};
+const modKeys = Object.keys(moduleConfig);
+const cols = 4;
+modKeys.forEach((mod, i) => {
+  const col = i % cols;
+  const row = Math.floor(i / cols);
+  moduleCenters[mod] = {
+    x: width * 0.12 + col * (width * 0.22),
+    y: height * 0.15 + row * (height * 0.25)
+  };
+});
+
+const simulation = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id(d => d.id).distance(d => {
+    const s = typeof d.source === "object" ? d.source : nodes.find(n => n.id === d.source);
+    const t = typeof d.target === "object" ? d.target : nodes.find(n => n.id === d.target);
+    return (s && t && s.module === t.module) ? 40 : 100;
+  }).strength(d => {
+    const s = typeof d.source === "object" ? d.source : nodes.find(n => n.id === d.source);
+    const t = typeof d.target === "object" ? d.target : nodes.find(n => n.id === d.target);
+    return (s && t && s.module === t.module) ? 0.4 : 0.08;
+  }))
+  .force("charge", d3.forceManyBody().strength(-180))
+  .force("center", d3.forceCenter(width / 2, height / 2).strength(0.03))
+  .force("collision", d3.forceCollide().radius(d => d.radius + 4))
+  .force("cluster", clusterForce(0.25))
+  .on("tick", ticked);
+
+function clusterForce(strength) {
+  let ns;
+  function force(alpha) {
+    for (const n of ns) {
+      const center = moduleCenters[n.module];
+      if (!center) continue;
+      n.vx += (center.x - n.x) * strength * alpha;
+      n.vy += (center.y - n.y) * strength * alpha;
+    }
+  }
+  force.initialize = (nodes) => { ns = nodes; };
+  return force;
+}
+
+let hullTickCounter = 0;
+function ticked() {
+  linkElements.attr("d", d => {
+    const dx = d.target.x - d.source.x;
+    const dy = d.target.y - d.source.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const tr = d.target.radius || 8;
+    const ratio = Math.max(0, (dist - tr) / dist);
+    const tx = d.source.x + dx * ratio;
+    const ty = d.source.y + dy * ratio;
+    const dr = dist * 2;
+    return "M" + d.source.x + "," + d.source.y + "A" + dr + "," + dr + " 0 0,1 " + tx + "," + ty;
+  });
+
+  nodeElements.attr("cx", d => d.x).attr("cy", d => d.y);
+  labelElements.attr("x", d => d.x).attr("y", d => d.y);
+
+  nodeGroup.selectAll(".hub-ring")
+    .attr("cx", d => d.x).attr("cy", d => d.y);
+
+  if (++hullTickCounter % 3 === 0) drawHulls();
+}
+
+function drawHulls() {
+  const hullData = [];
+  for (const [mod, cfg] of Object.entries(moduleConfig)) {
+    if (!moduleVisible[mod]) continue;
+    const modNodes = nodes.filter(n => n.module === mod);
+    if (modNodes.length < 2) continue;
+    const points = [];
+    for (const n of modNodes) {
+      const pad = n.radius + 18;
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+        points.push([n.x + Math.cos(a) * pad, n.y + Math.sin(a) * pad]);
+      }
+    }
+    const hull = d3.polygonHull(points);
+    if (hull) hullData.push({ mod, color: cfg.color, hull });
+  }
+
+  const paths = hullGroup.selectAll("path").data(hullData, d => d.mod);
+  paths.enter().append("path")
+    .attr("fill", d => d.color).attr("fill-opacity", 0.03)
+    .attr("stroke", d => d.color).attr("stroke-opacity", 0.1)
+    .attr("stroke-width", 1).attr("stroke-dasharray", "4,3")
+    .merge(paths)
+    .attr("d", d => "M" + d.hull.join("L") + "Z");
+  paths.exit().remove();
+}
+
+function dragStarted(event) { if (!event.active) simulation.alphaTarget(0.3).restart(); event.subject.fx = event.subject.x; event.subject.fy = event.subject.y; }
+function dragged(event) { event.subject.fx = event.x; event.subject.fy = event.y; }
+function dragEnded(event) { if (!event.active) simulation.alphaTarget(0); if (!layoutLocked) { event.subject.fx = null; event.subject.fy = null; } }
+
+// ============ TOOLTIP ============
+const tooltip = document.getElementById("tooltip");
+
+function showTooltip(event, d) {
+  const outs = outDeps[d.id] || [];
+  const ins = inDeps[d.id] || [];
+  const typeLabel = d.fnType === "constant" ? "const" : d.fnType === "internal" ? "internal" : d.fnType === "method" ? "method" : "fn";
+  tooltip.innerHTML =
+    '<div class="tt-name">' + d.name + '</div>' +
+    '<div class="tt-file">' + d.file + '</div>' +
+    '<div class="tt-module" style="background:' + d.color + '18;color:' + d.color + ';border:1px solid ' + d.color + '33">' + d.module + ' &middot; ' + typeLabel + '</div>' +
+    '<div class="tt-stats">' +
+      '<div>Calls <span>' + outs.length + '</span></div>' +
+      '<div>Called by <span>' + ins.length + '</span></div>' +
+      (d.isHub ? '<div style="color:#7ee787">Hub</div>' : '') +
+    '</div>' +
+    '<div class="tt-hint">Click for details &middot; Double-click to zoom</div>';
+  moveTooltip(event);
+  tooltip.classList.add("visible");
+}
+function moveTooltip(event) {
+  const x = event.clientX + 14;
+  const y = event.clientY - 10;
+  const r = tooltip.getBoundingClientRect();
+  tooltip.style.left = (x + r.width > window.innerWidth ? event.clientX - r.width - 10 : x) + "px";
+  tooltip.style.top = (y + r.height > window.innerHeight ? event.clientY - r.height - 10 : y) + "px";
+}
+function hideTooltip() { tooltip.classList.remove("visible"); }
+
+// ============ HIGHLIGHT ============
+let highlightLocked = false;
+let lockedNode = null;
+
+function lockHighlight(d) { highlightLocked = true; lockedNode = d; applyHighlight(d); }
+function unlockHighlight() { highlightLocked = false; lockedNode = null; resetHighlight(); }
+
+function applyHighlight(d) {
+  const connectedIds = new Set([d.id]);
+  links.forEach(l => {
+    const sid = typeof l.source === "object" ? l.source.id : l.source;
+    const tid = typeof l.target === "object" ? l.target.id : l.target;
+    if (sid === d.id) connectedIds.add(tid);
+    if (tid === d.id) connectedIds.add(sid);
+  });
+
+  nodeElements
+    .attr("fill-opacity", n => connectedIds.has(n.id) ? 1 : 0.06)
+    .attr("stroke-opacity", n => connectedIds.has(n.id) ? 1 : 0.06);
+  labelElements.attr("fill-opacity", n => connectedIds.has(n.id) ? 1 : 0.04);
+  linkElements
+    .attr("stroke-opacity", l => {
+      const sid = typeof l.source === "object" ? l.source.id : l.source;
+      const tid = typeof l.target === "object" ? l.target.id : l.target;
+      return (sid === d.id || tid === d.id) ? 0.7 : 0.01;
+    })
+    .attr("stroke", l => {
+      const sid = typeof l.source === "object" ? l.source.id : l.source;
+      const tid = typeof l.target === "object" ? l.target.id : l.target;
+      if (sid === d.id) return d.color;
+      if (tid === d.id) {
+        const srcNode = nodes.find(n => n.id === sid);
+        return srcNode ? srcNode.color : d.color;
+      }
+      return "#1e2630";
+    })
+    .attr("stroke-width", l => {
+      const sid = typeof l.source === "object" ? l.source.id : l.source;
+      const tid = typeof l.target === "object" ? l.target.id : l.target;
+      return (sid === d.id || tid === d.id) ? 2 : 1;
+    });
+}
+
+function resetHighlight() {
+  nodeElements
+    .attr("fill-opacity", d => d.fnType === "constant" ? 0.4 : d.fnType === "internal" ? 0.5 : 0.8)
+    .attr("stroke-opacity", d => d.isHub ? 0.9 : 0.3);
+  labelElements.attr("fill-opacity", 1);
+  linkElements
+    .attr("stroke-opacity", 0.12)
+    .attr("stroke-width", 1)
+    .attr("stroke", d => {
+      const sid = typeof d.source === "object" ? d.source.id : d.source;
+      const srcNode = nodes.find(n => n.id === sid);
+      return srcNode ? srcNode.color : "#1e2630";
+    });
+}
+
+// ============ ZOOM TO NODE ============
+function zoomToNode(d) {
+  const scale = 3;
+  const tx = width / 2 - d.x * scale;
+  const ty = height / 2 - d.y * scale;
+  svg.transition().duration(600).ease(d3.easeCubicOut)
+    .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+}
+
+function fitToView() {
+  const bounds = g.node().getBBox();
+  if (bounds.width === 0) return;
+  const pad = 60;
+  const scale = Math.min(width / (bounds.width + pad * 2), height / (bounds.height + pad * 2), 1.5);
+  const tx = width / 2 - (bounds.x + bounds.width / 2) * scale;
+  const ty = height / 2 - (bounds.y + bounds.height / 2) * scale;
+  svg.transition().duration(600).ease(d3.easeCubicOut)
+    .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+}
+
+// ============ INFO PANEL ============
+function navigateToNode(nodeId) {
+  const node = nodes.find(n => n.id === nodeId);
+  if (!node) return;
+  showInfoPanel(node);
+  lockHighlight(node);
+  zoomToNode(node);
+}
+
+function showInfoPanel(d) {
+  const panel = document.getElementById("info-panel");
+  const content = document.getElementById("info-content");
+  const outs = outDeps[d.id] || [];
+  const ins = inDeps[d.id] || [];
+  const typeLabel = d.fnType === "constant" ? "constant" : d.fnType === "internal" ? "internal fn" : d.fnType === "method" ? "class method" : "function";
+
+  let html = '<h3>' + d.name + '</h3>';
+  html += '<div class="panel-file">' + d.file + '</div>';
+  html += '<span class="info-tag" style="background:' + d.color + '18;color:' + d.color + ';border:1px solid ' + d.color + '33">' + d.module + '</span>';
+  html += ' <span class="info-tag" style="background:#1e2630;color:#8b949e;border:1px solid #2e3a46">' + typeLabel + '</span>';
+
+  html += '<div class="info-section" style="margin-top:14px"><h4>Metrics</h4>';
+  html += metric("Outgoing Calls", outs.length);
+  html += metric("Incoming Calls", ins.length);
+  html += metric("Total Connections", outs.length + ins.length);
+  html += '</div>';
+
+  if (outs.length > 0) {
+    html += '<div class="info-section"><h4>Calls (' + outs.length + ')</h4><div class="dep-list">';
+    for (const dep of outs) {
+      const target = nodes.find(n => n.id === dep);
+      const tName = target ? target.name : dep.split("::")[1];
+      const tColor = target ? target.color : "#536171";
+      html += '<div><span style="color:' + d.color + '">' + d.name + '</span> <span class="dep-arrow">&rarr;</span> <span class="dep-name" onclick="navigateToNode(\'' + dep + '\')" style="color:' + tColor + '">' + tName + '</span></div>';
+    }
+    html += '</div></div>';
+  }
+  if (ins.length > 0) {
+    html += '<div class="info-section"><h4>Called By (' + ins.length + ')</h4><div class="dep-list">';
+    for (const dep of ins) {
+      const source = nodes.find(n => n.id === dep);
+      const sName = source ? source.name : dep.split("::")[1];
+      const sColor = source ? source.color : "#536171";
+      html += '<div><span class="dep-name" onclick="navigateToNode(\'' + dep + '\')" style="color:' + sColor + '">' + sName + '</span> <span class="dep-arrow">&rarr;</span> <span style="color:' + d.color + '">' + d.name + '</span></div>';
+    }
+    html += '</div></div>';
+  }
+
+  content.innerHTML = html;
+  panel.classList.add("open");
+  requestAnimationFrame(() => { panel.style.display = "block"; panel.classList.add("open"); });
+}
+
+function metric(label, value) {
+  return '<div class="info-metric"><span class="label">' + label + '</span><span class="value">' + value + '</span></div>';
+}
+
+function closePanel() {
+  const panel = document.getElementById("info-panel");
+  panel.classList.remove("open");
+  setTimeout(() => { if (!panel.classList.contains("open")) panel.style.display = "none"; }, 250);
+}
+
+// ============ SEARCH ============
+const searchInput = document.getElementById("search");
+searchInput.addEventListener("input", function() {
+  const q = this.value.toLowerCase().trim();
+  if (!q) { if (!highlightLocked) resetHighlight(); return; }
+
+  const matchIds = new Set();
+  nodes.forEach(n => {
+    if (n.name.toLowerCase().includes(q) || n.file.toLowerCase().includes(q) || n.module.toLowerCase().includes(q)) {
+      matchIds.add(n.id);
+    }
+  });
+
+  nodeElements
+    .attr("fill-opacity", n => matchIds.has(n.id) ? 1 : 0.04)
+    .attr("stroke-opacity", n => matchIds.has(n.id) ? 1 : 0.04);
+  labelElements.attr("fill-opacity", n => matchIds.has(n.id) ? 1 : 0.04);
+  linkElements.attr("stroke-opacity", l => {
+    const sid = typeof l.source === "object" ? l.source.id : l.source;
+    const tid = typeof l.target === "object" ? l.target.id : l.target;
+    return (matchIds.has(sid) && matchIds.has(tid)) ? 0.5 : 0.01;
+  });
+});
+
+// ============ MODULE TOGGLES ============
+const togglesDiv = document.getElementById("module-toggles");
+for (const [mod, cfg] of Object.entries(moduleConfig)) {
+  const count = moduleFnCount[mod] || 0;
+  const btn = document.createElement("button");
+  btn.className = "module-btn";
+  btn.textContent = mod + " " + count;
+  btn.style.color = cfg.color;
+  btn.style.borderColor = cfg.color + "44";
+  btn.onclick = () => {
+    moduleVisible[mod] = !moduleVisible[mod];
+    btn.classList.toggle("inactive");
+    updateVisibility();
+  };
+  togglesDiv.appendChild(btn);
+}
+
+function updateVisibility() {
+  nodeElements.attr("display", d => moduleVisible[d.module] ? null : "none");
+  labelElements.attr("display", d => moduleVisible[d.module] ? null : "none");
+  linkElements.attr("display", d => {
+    const s = typeof d.source === "object" ? d.source : nodes.find(n => n.id === d.source);
+    const t = typeof d.target === "object" ? d.target : nodes.find(n => n.id === d.target);
+    return (s && moduleVisible[s.module] && t && moduleVisible[t.module]) ? null : "none";
+  });
+  drawHulls();
+  updateMinimap();
+}
+
+// ============ LEGEND ============
+const legendDiv = document.getElementById("legend");
+let legendHtml = "";
+for (const [mod, cfg] of Object.entries(moduleConfig)) {
+  const count = moduleFnCount[mod] || 0;
+  legendHtml += '<div class="legend-item"><div class="legend-dot" style="background:' + cfg.color + '"></div><span>' + mod + '</span><span class="legend-count">' + count + '</span></div>';
+}
+legendHtml += '<div class="legend-item" style="margin-top:6px;border-top:1px solid #1e2630;padding-top:6px"><div class="legend-dot" style="background:#7ee787;box-shadow:0 0 6px #7ee787"></div><span>Hub (4+ callers)</span></div>';
+legendDiv.innerHTML = legendHtml;
+
+// ============ STATS BAR ============
+const totalFunctions = nodes.length;
+const totalEdges = edgesData.length;
+const hubCount = nodes.filter(n => n.isHub).length;
+const totalFiles = new Set(nodes.map(n => n.file)).size;
+
+document.getElementById("stats-bar").innerHTML = [
+  stat("Functions", totalFunctions),
+  stat("Edges", totalEdges),
+  stat("Files", totalFiles),
+  stat("Modules", Object.keys(moduleConfig).length),
+  stat("Hubs", hubCount),
+].join("");
+
+function stat(label, value, warn) {
+  return '<div class="stat"><span class="stat-label">' + label + '</span><span class="stat-value' + (warn ? ' warn' : '') + '">' + value + '</span></div>';
+}
+
+// ============ MINIMAP ============
+const mmSvg = d3.select("#minimap-svg");
+const mmG = mmSvg.append("g");
+const mmViewport = mmSvg.append("rect").attr("class", "viewport-rect");
+
+function updateMinimap() {
+  const bounds = g.node().getBBox();
+  if (bounds.width === 0) return;
+
+  const pad = 20;
+  const mmW = 160, mmH = 100;
+  const scaleX = mmW / (bounds.width + pad * 2);
+  const scaleY = mmH / (bounds.height + pad * 2);
+  const mmScale = Math.min(scaleX, scaleY);
+  const offsetX = (mmW - bounds.width * mmScale) / 2 - bounds.x * mmScale;
+  const offsetY = (mmH - bounds.height * mmScale) / 2 - bounds.y * mmScale;
+
+  mmG.selectAll("circle").remove();
+  mmG.selectAll("circle")
+    .data(nodes.filter(n => moduleVisible[n.module]))
+    .join("circle")
+    .attr("cx", d => d.x * mmScale + offsetX)
+    .attr("cy", d => d.y * mmScale + offsetY)
+    .attr("r", 1.5)
+    .attr("fill", d => d.color)
+    .attr("fill-opacity", 0.7);
+
+  const t = d3.zoomTransform(svg.node());
+  const vx = (-t.x / t.k) * mmScale + offsetX;
+  const vy = (-t.y / t.k) * mmScale + offsetY;
+  const vw = (width / t.k) * mmScale;
+  const vh = (height / t.k) * mmScale;
+  mmViewport.attr("x", vx).attr("y", vy).attr("width", vw).attr("height", vh);
+}
+
+// Click minimap to navigate
+document.getElementById("minimap").addEventListener("click", (event) => {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const mx = event.clientX - rect.left;
+  const my = event.clientY - rect.top;
+
+  const bounds = g.node().getBBox();
+  const mmW = 160, mmH = 100;
+  const scaleX = mmW / (bounds.width + 40);
+  const scaleY = mmH / (bounds.height + 40);
+  const mmScale = Math.min(scaleX, scaleY);
+  const offsetX = (mmW - bounds.width * mmScale) / 2 - bounds.x * mmScale;
+  const offsetY = (mmH - bounds.height * mmScale) / 2 - bounds.y * mmScale;
+
+  const worldX = (mx - offsetX) / mmScale;
+  const worldY = (my - offsetY) / mmScale;
+
+  const t = d3.zoomTransform(svg.node());
+  const tx = width / 2 - worldX * t.k;
+  const ty = height / 2 - worldY * t.k;
+  svg.transition().duration(400).ease(d3.easeCubicOut)
+    .call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(t.k));
+});
+
+// ============ TOOLBAR ACTIONS ============
+document.getElementById("btn-fit").addEventListener("click", fitToView);
+
+document.getElementById("btn-lock").addEventListener("click", function() {
+  layoutLocked = !layoutLocked;
+  this.innerHTML = layoutLocked ? "&#x1F512;" : "&#x1F513;";
+  this.title = layoutLocked ? "Unlock layout (L)" : "Lock layout (L)";
+  if (layoutLocked) {
+    nodes.forEach(n => { n.fx = n.x; n.fy = n.y; });
+    simulation.stop();
+  } else {
+    nodes.forEach(n => { n.fx = null; n.fy = null; });
+    simulation.alpha(0.3).restart();
+  }
+});
+
+// ============ KEYBOARD SHORTCUTS ============
+document.addEventListener("keydown", (e) => {
+  if (e.target === searchInput) {
+    if (e.key === "Escape") { searchInput.blur(); searchInput.value = ""; resetHighlight(); }
+    return;
+  }
+
+  if (e.key === "/" || e.key === "s") { e.preventDefault(); searchInput.focus(); }
+  if (e.key === "Escape") { closePanel(); unlockHighlight(); }
+  if (e.key === "f" || e.key === "F") fitToView();
+  if (e.key === "l" || e.key === "L") document.getElementById("btn-lock").click();
+});
+
+// Show keyboard hints briefly
+const kbHint = document.getElementById("keyboard-hint");
+kbHint.classList.add("show");
+setTimeout(() => kbHint.classList.remove("show"), 4000);
+
+// Initial fit after simulation settles
+setTimeout(fitToView, 2000);
+
+// Periodic minimap update
+setInterval(updateMinimap, 500);
+
+// Window resize
+window.addEventListener("resize", () => {
+  const w = window.innerWidth;
+  const h = window.innerHeight - 90;
+  svg.attr("width", w).attr("height", h);
+  simulation.force("center", d3.forceCenter(w / 2, h / 2).strength(0.03));
+  simulation.alpha(0.1).restart();
+});
+
+// Start hub pulse animation after layout stabilizes
+setTimeout(() => {
+  function pulseHubs() {
+    nodeGroup.selectAll(".hub-ring")
+      .attr("opacity", 0.5)
+      .attr("r", d => d.radius + 2)
+      .transition().duration(2000).ease(d3.easeCubicOut)
+      .attr("r", d => d.radius + 14)
+      .attr("opacity", 0)
+      .on("end", function() { if (this === nodeGroup.selectAll(".hub-ring").node()) setTimeout(pulseHubs, 1000); });
+  }
+  pulseHubs();
+}, 3000);
+</script>
+</body>
+</html>

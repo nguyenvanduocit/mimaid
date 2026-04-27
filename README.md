@@ -44,6 +44,16 @@ VITE_LIVEBLOCKS_PUBLIC_API_KEY=your_api_key_here
 bun run dev
 ```
 
+### Running Tests
+
+```bash
+bun run test         # Watch mode
+bun run test:run     # Single run (CI)
+bun run typecheck    # TypeScript check only
+```
+
+The test suite covers pure-logic surfaces (URL compression, error parsing, event bus, AI message building) — 11 tests across 3 files. DOM-heavy code is covered after the planned god-class refactor in Sub-Project 1.
+
 ## Usage
 
 ### Basic Usage

@@ -567,3 +567,13 @@ If all of the above pass, Sub-Project 0 is complete and Sub-Project 1 (refactor 
 - `AIMessage` type defined once in `ai-messages.ts`, imported by `ai-handler.ts` and used in `ai-messages.test.ts` indirectly (test asserts shape).
 - `parseMermaidError` test signatures match `utils.ts` (returns `MermaidError` with `line`, `column`, `message`, `severity`, `source`).
 - Event names (`"ai:start"`) match the `AppEvents` type in `events.ts`.
+
+---
+
+## Findings (discovered during execution)
+
+- **Latent bug in `generateDiagramHash` (src/utils.ts:38-44):** When called with empty string, calls `window.history.replaceState(null, "", "")`. Per MDN, an empty URL string means "use current URL" — so the hash is NOT cleared (verified in jsdom; confirmed by behavior spec). Should use `window.location.hash = ""` or `window.history.replaceState(null, "", window.location.pathname + window.location.search)` instead. Defer fix to Sub-Project 5 (Quality Cleanup) or include in Sub-Project 1 (Refactor) if utils.ts is touched. The originally-planned third URL-hash test ("clears hash when given empty string") was dropped to keep Task 0 strictly to test-infra scope; re-add it after the bug is fixed.
+
+- **Console.log debug noise during tests (src/utils.ts:96,126,137,145):** `parseMermaidError` emits `[DEBUG]` logs that pollute test output. Already noted in roadmap Sub-Project 5 — confirmed visible during this implementation. Strip when cleanup task runs.
+
+- **Adjusted final test count:** 11 passing tests (not 12 as initially planned in Task 7) — accounts for the dropped third URL-hash test.

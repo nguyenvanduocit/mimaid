@@ -16,6 +16,13 @@ describe("URL hash compression", () => {
   it("returns null when no hash is present", () => {
     expect(loadDiagramFromURL()).toBeNull();
   });
+
+  it("clears hash when given empty string", () => {
+    generateDiagramHash("flowchart TD\n  A --> B");
+    expect(window.location.hash).not.toBe("");
+    generateDiagramHash("");
+    expect(window.location.hash).toBe("");
+  });
 });
 
 describe("parseMermaidError", () => {

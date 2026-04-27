@@ -39,7 +39,7 @@ export function generateDiagramHash(code: string): void {
     const compressedCode = LZString.compressToEncodedURIComponent(code);
     window.history.replaceState(null, "", `#${compressedCode}`);
   } else {
-    window.history.replaceState(null, "", "");
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
   }
 }
 
@@ -93,8 +93,7 @@ export function getRandomColor(): string {
  */
 export function parseMermaidError(error: Error | string, code: string): MermaidError {
   const errorMessage = typeof error === 'string' ? error : error.message;
-  console.log('[DEBUG] parseMermaidError input:', errorMessage);
-  
+
   const errorObj: MermaidError = {
     message: errorMessage,
     severity: 'error' as const,
@@ -123,7 +122,6 @@ export function parseMermaidError(error: Error | string, code: string): MermaidE
   for (const pattern of patterns) {
     const match = errorMessage.match(pattern);
     if (match) {
-      console.log('[DEBUG] Pattern matched:', pattern, 'Result:', match);
       errorObj.line = parseInt(match[1], 10);
       if (match[2]) {
         errorObj.column = parseInt(match[2], 10);
@@ -132,17 +130,11 @@ export function parseMermaidError(error: Error | string, code: string): MermaidE
     }
   }
 
-  // If no line number found, try to infer from error type
   if (!errorObj.line) {
-    console.log('[DEBUG] No line number found in error, attempting to infer...');
     errorObj.line = inferErrorLine(errorMessage, code);
-    console.log('[DEBUG] Inferred line:', errorObj.line);
   }
 
-  // Clean up error message
   errorObj.message = cleanErrorMessage(errorMessage);
-  
-  console.log('[DEBUG] Final parsed error:', errorObj);
   return errorObj;
 }
 

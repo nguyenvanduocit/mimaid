@@ -8,7 +8,7 @@ A lightweight, browser-based Mermaid diagram editor with real-time preview and c
 - 👥 Collaborative editing (when using room parameter)
 - 📱 Responsive design with resizable editor
 - 🔍 Pan and zoom preview
-- 💾 Export diagrams as SVG or PNG
+- 🤖 AI-powered diagram generation (Google Gemini, OpenAI, Anthropic Claude)
 - 🎯 Smart code completion
 - 🔗 Shareable diagram URLs
 - 🎨 Syntax highlighting
@@ -80,11 +80,6 @@ Note: The URL hash contains the compressed diagram code, allowing for easy shari
 To share a view-only version of your diagram:
 1. Add `?hideEditor` to the URL
 2. The editor will be hidden, showing only the diagram preview
-
-### Exporting
-
-- Click the "SVG" button to export as SVG
-- Click the "PNG" button to export as PNG
 
 ## Technology Stack
 

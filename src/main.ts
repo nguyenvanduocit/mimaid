@@ -25,6 +25,7 @@ import {
 } from "./utils";
 import { EventHelpers } from "./events";
 import { SKILL_CONTENT } from "./skill-content";
+import { showToast } from "./ui/Toast";
 
 let monacoInstance: any | null = null;
 
@@ -302,7 +303,7 @@ class MermaidEditor {
 
     // Listen for AI errors - show toast notification
     EventHelpers.safeListen("ai:error", ({ error }) => {
-      this.showToast(error, "error");
+      showToast(error, "error");
     });
 
     // Listen for app errors
@@ -502,7 +503,7 @@ class MermaidEditor {
       }
 
       // Show visual feedback
-      this.showToast("Settings saved successfully!");
+      showToast("Settings saved successfully!");
     });
 
     setupModalDismiss(settingsDialog, settingsBtn);
@@ -672,18 +673,6 @@ class MermaidEditor {
   private showError(message: string): void {
     this.elements.errorOverlay.textContent = message;
     this.elements.errorOverlay.style.display = "flex";
-  }
-
-  private showToast(message: string, type: "success" | "error" = "success"): void {
-    const toast = document.createElement("div");
-    toast.textContent = message;
-    toast.className = `toast-message toast-${type}`;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.classList.add("fade-out");
-      setTimeout(() => document.body.removeChild(toast), 500);
-    }, 4000);
   }
 
   private hideError(): void {

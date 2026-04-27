@@ -5,6 +5,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { AI_CONFIG } from "./config";
 import { AIProviderType } from "./types";
 import { EventHelpers } from "./events";
+import { buildAIMessages, AIMessage } from "./ai-messages";
 
 /**
  * Get the AI model instance based on provider configuration
@@ -115,28 +116,8 @@ Please provide the modified Mermaid diagram code.`;
     this.setLoadingState(true);
   }
 
-  /**
-   * Build messages array for AI SDK
-   */
-  private buildMessages(
-    prompt: string,
-    currentCode: string,
-  ): Array<{ role: "user" | "assistant"; content: string }> {
-    const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
-
-    if (currentCode) {
-      messages.push({
-        role: "user",
-        content: `Current diagram code:\n\`\`\`mermaid\n${currentCode}\n\`\`\``,
-      });
-      messages.push({
-        role: "assistant",
-        content: "I can see the current diagram. How would you like me to modify it?",
-      });
-    }
-
-    messages.push({ role: "user", content: prompt });
-    return messages;
+  private buildMessages(prompt: string, currentCode: string): AIMessage[] {
+    return buildAIMessages(prompt, currentCode);
   }
 
   private getSystemPrompt(): string {

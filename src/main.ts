@@ -14,6 +14,7 @@ import {
 import { AIProviderType } from "./types";
 import { AIHandler } from "./ai-handler";
 import { createShortLink } from "./short-link";
+import { registerWebMcpTools } from "./webmcp";
 import { CollaborationHandler } from "./collaboration";
 import {
   debounce,
@@ -189,6 +190,12 @@ class MermaidEditor {
 
     // Register code action provider for AI fixes
     this.registerAICodeActionProvider();
+
+    // Expose the editor to in-browser agents through WebMCP
+    registerWebMcpTools({
+      getCode: () => this.editor.getValue(),
+      setCode: (code) => this.editor.setValue(code),
+    });
 
     // Emit editor ready event
     EventHelpers.safeEmit("editor:ready", { editor: this.editor });

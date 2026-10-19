@@ -50,11 +50,15 @@ src/
 ├── mermaid-highlight.ts      # Syntax tokenizer copied from pele (MIT); keep close to upstream
 ├── mermaid-tokens.ts         # Monaco token adapter; colors the keywords of the declared diagram
 ├── mermaid-keywords.ts       # Keywords per diagram type (autocomplete + highlighting)
+├── webmcp.ts                 # WebMCP tools on document.modelContext (agents read/write/share diagrams)
 ├── types.ts                  # TypeScript type definitions
 ├── utils.ts                  # Utility functions (debounce, compression, storage)
 ├── events.ts                 # Central event bus with type-safe event system
 └── style.css                 # Application styles
 ```
+
+## WebMCP
+`src/webmcp.ts` registers tools on `document.modelContext` (spec shape: `registerTool(tool, { signal })`, `execute` returns a string). `createWebMcpTools(app)` is pure and takes `getCode`/`setCode`, so tests run without Monaco; `main.ts` wires it in `setupEditor()`. A new capability for agents = one more entry in `createWebMcpTools` plus a row in the README table. Tool names, descriptions and schemas are what agents see, so keep them precise. Mark side-effecting tools `consequentialHint`, pure reads `readOnlyHint`.
 
 ## Key Development Patterns
 

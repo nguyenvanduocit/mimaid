@@ -11,6 +11,7 @@ A lightweight, browser-based Mermaid diagram editor with real-time preview and c
 - 🤖 AI-powered diagram generation (Google Gemini, OpenAI, Anthropic Claude)
 - 🎯 Smart code completion
 - 🔗 Shareable diagram URLs
+- 🧩 WebMCP tools for in-browser AI agents
 - 🎨 Syntax highlighting
 - ⌨️ Auto-closing brackets
 - 📝 Comment support
@@ -80,6 +81,20 @@ Note: The URL hash contains the compressed diagram code, allowing for easy shari
 To share a view-only version of your diagram:
 1. Add `?hideEditor` to the URL
 2. The editor will be hidden, showing only the diagram preview
+
+### WebMCP (for AI agents)
+
+The editor registers [WebMCP](https://webmachinelearning.github.io/webmcp/) tools on `document.modelContext`, so an agent running in the browser can draw and share diagrams without scraping the UI. Browsers without WebMCP ignore it. In Chrome, enable `chrome://flags/#enable-webmcp-testing` or join the origin trial.
+
+| Tool | What it does |
+| --- | --- |
+| `get_diagram` | Current source and whether it renders (error with line and column if not) |
+| `set_diagram` | Replace the editor content; the preview and URL hash update |
+| `validate_diagram` | Check a draft for syntax errors without touching the editor |
+| `export_svg` | Render source to a standalone SVG string |
+| `get_share_url` | Link with the source in the hash: `edit`, `embed` (`?hideEditor`) or `collab` (`?room=`) |
+| `create_short_link` | Upload to the server and return `/s/<id>` (90-day expiry; marked `consequentialHint`) |
+| `get_syntax_guide` | Mermaid syntax rules for this app |
 
 ## Technology Stack
 

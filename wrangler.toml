@@ -1,0 +1,7 @@
+name = "mimaid"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-05-01"
+
+[[kv_namespaces]]
+binding = "SHORTLINKS"
+id = "01144d3d1a51419794251f2f568d3793"

@@ -13,6 +13,7 @@ import {
 } from "./config";
 import { AIProviderType } from "./types";
 import { AIHandler } from "./ai-handler";
+import { createShortLink } from "./short-link";
 import { CollaborationHandler } from "./collaboration";
 import {
   debounce,
@@ -1367,6 +1368,7 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     const shareModal = document.querySelector<HTMLDivElement>("#share-modal");
     const shareModalClose = document.querySelector<HTMLButtonElement>("#share-modal-close");
     const copyLinkBtn = document.querySelector<HTMLButtonElement>("#copy-link-btn");
+    const copyShortBtn = document.querySelector<HTMLButtonElement>("#copy-short-btn");
     const copyCollabBtn = document.querySelector<HTMLButtonElement>("#copy-collab-btn");
     const copyEmbedBtn = document.querySelector<HTMLButtonElement>("#copy-embed-btn");
     const shareUrlPreview = document.querySelector<HTMLDivElement>("#share-url-preview");
@@ -1433,6 +1435,16 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     copyLinkBtn?.addEventListener("click", async () => {
       const url = window.location.href;
       await copyAndShowSuccess(url, copyLinkBtn);
+    });
+
+    // Copy short link
+    copyShortBtn?.addEventListener("click", async () => {
+      try {
+        const url = await createShortLink(this.editor.getValue());
+        await copyAndShowSuccess(url, copyShortBtn);
+      } catch (error) {
+        showToast(`Could not create short link: ${(error as Error).message}`, "error");
+      }
     });
 
     // Copy collaboration link

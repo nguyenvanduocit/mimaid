@@ -219,11 +219,11 @@ FINAL CHECK: Before outputting, scan for **, *, _, [], \`\` - if found, REMOVE t
     inputField.disabled = loading;
     inputArea.style.display = loading ? "none" : "flex";
     generationStatus.style.display = loading ? "block" : "none";
-    generationStatus.textContent = loading ? "AI is generating..." : "";
+    generationStatus.textContent = loading ? "Generating…" : "";
     inputField.style.opacity = loading ? "0.5" : "1";
 
     if (loading) {
-      EventHelpers.safeEmit("ai:progress", { status: "AI is generating..." });
+      EventHelpers.safeEmit("ai:progress", { status: "Generating…" });
     }
   }
 }

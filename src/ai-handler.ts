@@ -145,6 +145,11 @@ USE MERMAID v11 SYNTAX:
 STYLING (use these instead of markdown):
 - Colors: style A fill:#4CAF50,stroke:#2E7D32
 - Classes: classDef highlight fill:#ff0,stroke:#333
+- Edges: linkStyle 0 stroke:#f00
+
+RENDERER LIMITS (pele renderer):
+- Colors come only from style, classDef and linkStyle. NEVER use %%{init}%% theme or themeVariables - they are ignored.
+- No HTML tags in labels. No click callbacks.
 
 Response format:
 \`\`\`mermaid

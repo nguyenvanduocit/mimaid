@@ -46,6 +46,8 @@ flowchart TD
     style A fill:#ff6b6b,stroke:#c92a2a,color:#fff
 ```
 
+Colors come only from `style`, `classDef` and `linkStyle`. The renderer (pele) ignores `%%{init}%%` theme and `themeVariables`, HTML tags in labels, and click callbacks.
+
 ## How It Works
 
 MinimalMermaid stores diagram code in the URL hash using LZ-String compression:
@@ -118,7 +120,7 @@ https://mimaid.aiocean.dev/?hideEditor#<hash>
 
 ## Supported Diagram Types
 
-All Mermaid diagram types are supported:
+Supported diagram types:
 - `flowchart` / `graph` - Flow diagrams
 - `sequenceDiagram` - Sequence diagrams
 - `classDiagram` - Class diagrams

@@ -1,6 +1,5 @@
 /* ==========================================================================
-   Soft Organic Theme - Mimaid
-   A warm, gentle aesthetic with pastel gradients and organic shapes
+   Mimaid - paper panels on a warm page (Flexoki palette)
    ========================================================================== */
 
 /* ==========================================================================
@@ -8,49 +7,114 @@
    ========================================================================== */
 
 :root {
-  /* Core Colors */
-  --color-bg: #fdfbf7;
-  --color-bg-warm: #faf6f0;
-  --color-bg-card: rgba(255, 255, 255, 0.85);
-  --color-text: #2d3436;
-  --color-text-secondary: #636e72;
-  --color-text-muted: #9ca3af;
+  /* Surfaces */
+  --color-bg: #f2f0e5;
+  --color-bg-warm: #f2f0e5;
+  --panel: #fffcf0;
+  --line: #e6e4d9;
+  --line-hover: #dad8ce;
+  --line-active: #cecdc3;
 
-  /* Accent Colors - Soft Organic Palette */
-  --color-sage: #8fb38f;
-  --color-sage-light: #b8d4b8;
-  --color-sage-dark: #6a9a6a;
-  --color-coral: #f4a261;
-  --color-coral-light: #f8c9a0;
-  --color-lavender: #c9b3e8;
-  --color-lavender-light: #e0d4f5;
-  --color-sky: #a8d5e2;
-  --color-rose: #f5c6c6;
+  /* Text */
+  --color-text: #100f0f;
+  --color-text-secondary: #6f6e69;
+  --color-text-muted: #878580;
 
-  /* Gradients */
-  --gradient-primary: linear-gradient(135deg, var(--color-sage) 0%, var(--color-sky) 100%);
-  --gradient-warm: linear-gradient(135deg, var(--color-coral-light) 0%, var(--color-rose) 100%);
-  --gradient-soft: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-warm) 100%);
+  /* Accent & status */
+  --color-accent: #205ea6;
+  --color-accent-dark: #1a4f8c;
+  --color-warning: #bc5215;
+  --color-warning-soft: #fbeadf;
+  --color-error: #af3029;
+  --color-error-soft: #f9e1dd;
+  --color-collab: #5e409d;
+  --color-collab-dark: #4a3280;
+  --color-collab-soft: #e8e2f4;
 
-  /* Shadows - minimal */
-  --shadow-soft: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-medium: 0 2px 8px rgba(0, 0, 0, 0.1);
+  /* Shadows */
+  --shadow-soft: 0 1px 2px rgba(16, 15, 15, 0.06);
+  --shadow-medium: 0 4px 16px rgba(16, 15, 15, 0.1);
 
   /* Typography */
-  --font-display: "Fraunces", Georgia, serif;
-  --font-body: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --font-body: -apple-system, BlinkMacSystemFont, "Inter Variable", Inter, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "Cascadia Code", Menlo, Monaco, Consolas, monospace;
 
-  /* Spacing */
-  --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
+  /* Shape */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --panel-gap: 8px;
+  --panel-header-height: 54px;
 
   /* Transitions */
   --transition-fast: 150ms ease-out;
   --transition-normal: 300ms ease-out;
-  --transition-slow: 500ms ease-out;
+
+  /* Diagram colors: pele reads these CSS variables */
+  --pele-bg: var(--panel);
+  --pele-fg: var(--color-text);
+  --pele-muted: var(--color-text-secondary);
+  --pele-line: var(--color-text);
+  --pele-surface: #f2f0e5;
+  --pele-surface-alt: #e6e4d9;
+  --pele-border: #cecdc3;
+  --pele-accent: var(--color-accent);
+  --pele-critical: var(--color-error);
+  --pele-error: var(--color-error);
+  --pele-font: var(--font-body);
+  --pele-font-mono: var(--font-mono);
+  --pele-radius: var(--radius-sm);
+  --pele-series-1: #af3029;
+  --pele-series-2: #bc5215;
+  --pele-series-3: #ad8301;
+  --pele-series-4: #66800b;
+  --pele-series-5: #24837b;
+  --pele-series-6: #205ea6;
+  --pele-series-7: #5e409d;
+  --pele-series-8: #a02f6f;
+
+  color-scheme: light dark;
+}
+
+/* Dark theme follows the system setting (Flexoki dark palette) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #100f0f;
+    --color-bg-warm: #1c1b1a;
+    --panel: #1c1b1a;
+    --line: #282726;
+    --line-hover: #343331;
+    --line-active: #403e3c;
+
+    --color-text: #cecdc3;
+    --color-text-secondary: #878580;
+    --color-text-muted: #6f6e69;
+
+    --color-accent: #3171b2;
+    --color-accent-dark: #205ea6;
+    --color-warning: #da702c;
+    --color-warning-soft: #3a2214;
+    --color-error: #d14d41;
+    --color-error-soft: #3a1c1a;
+    --color-collab: #8b7ec8;
+    --color-collab-dark: #735eb5;
+    --color-collab-soft: #2a2440;
+
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.5);
+
+    --pele-surface: #282726;
+    --pele-surface-alt: #343331;
+    --pele-border: #403e3c;
+    --pele-series-1: #d14d41;
+    --pele-series-2: #da702c;
+    --pele-series-3: #d0a215;
+    --pele-series-4: #879a39;
+    --pele-series-5: #3aa99f;
+    --pele-series-6: #4385be;
+    --pele-series-7: #8b7ec8;
+    --pele-series-8: #ce5d97;
+  }
 }
 
 /* ==========================================================================
@@ -60,7 +124,7 @@
 body {
   overflow: hidden;
   overscroll-behavior: none;
-  background: var(--gradient-soft);
+  background: var(--color-bg);
   font-family: var(--font-body);
   color: var(--color-text);
   line-height: 1.6;
@@ -84,7 +148,7 @@ body {
 }
 
 /* ==========================================================================
-   Editor Pane
+   Panels (editor + preview)
    ========================================================================== */
 
 .editor-pane {
@@ -94,17 +158,15 @@ body {
   flex-direction: column;
   contain: layout style;
   will-change: flex-basis;
-  background: var(--color-bg-card);
+  margin: var(--panel-gap) 0 var(--panel-gap) var(--panel-gap);
+  background: var(--panel);
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
 .editor-pane.visible {
   display: flex;
 }
-
-/* ==========================================================================
-   Preview Pane
-   ========================================================================== */
 
 .preview-pane {
   flex: 1;
@@ -113,9 +175,9 @@ body {
   position: relative;
   contain: layout style;
   content-visibility: auto;
-  background-color: var(--color-bg-card);
-  background-image: radial-gradient(circle, var(--color-sage-light) 1px, transparent 1px);
-  background-size: 20px 20px;
+  margin: var(--panel-gap) var(--panel-gap) var(--panel-gap) 0;
+  background: var(--panel);
+  border-radius: var(--radius-lg);
 }
 
 #mermaid-preview {
@@ -147,17 +209,28 @@ body {
    ========================================================================== */
 
 .resize-handle {
-  width: 4px;
-  background: var(--color-sage-light);
+  flex: 0 0 var(--panel-gap);
   cursor: col-resize;
-  transition: background var(--transition-fast);
   position: relative;
   overflow: visible;
   z-index: 10;
 }
 
-.resize-handle:hover {
-  background: var(--color-sage);
+.resize-handle::before {
+  content: "";
+  position: absolute;
+  top: var(--panel-gap);
+  bottom: var(--panel-gap);
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 1px;
+  background: transparent;
+  transition: background var(--transition-fast);
+}
+
+.resize-handle:hover::before {
+  background: var(--line-active);
 }
 
 .collapse-btn {
@@ -166,18 +239,18 @@ body {
   left: 50%;
   transform: translate(-50%, -50%);
   width: 16px;
-  height: 48px;
+  height: 40px;
   padding: 0;
-  border: 1px solid var(--color-sage-light);
-  border-radius: 6px;
-  background: white;
-  color: var(--color-sage-dark);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--color-text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+  transition: opacity var(--transition-fast), background var(--transition-fast);
   box-shadow: var(--shadow-soft);
 }
 
@@ -187,9 +260,8 @@ body {
 }
 
 .collapse-btn:hover {
-  background: var(--color-sage);
-  color: white;
-  border-color: var(--color-sage);
+  background: var(--line);
+  color: var(--color-text);
 }
 
 .collapse-btn svg {
@@ -198,8 +270,6 @@ body {
 
 .resize-handle.collapsed {
   cursor: default;
-  width: 8px;
-  background: transparent;
 }
 
 .resize-handle.collapsed .collapse-btn {
@@ -211,28 +281,26 @@ body {
 }
 
 /* ==========================================================================
-   Status Bar (Top Toolbar)
+   Panel Header (editor toolbar)
    ========================================================================== */
 
 .status-bar {
   position: relative;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 4px 8px;
-  background: var(--gradient-primary);
-  color: white;
+  flex-shrink: 0;
+  height: var(--panel-header-height);
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--color-text);
   font-size: 13px;
-  font-weight: 500;
   gap: 8px;
 }
 
 .status-text {
-  color: white;
+  color: var(--color-text-secondary);
   font-size: 13px;
   flex-grow: 1;
-  font-weight: 500;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* ==========================================================================
@@ -240,44 +308,26 @@ body {
    ========================================================================== */
 
 .button {
-  padding: 8px;
+  padding: 6px;
   border-radius: var(--radius-sm);
   border: none;
   cursor: pointer;
   font-size: 14px;
   font-family: var(--font-body);
   font-weight: 500;
-  background: white;
-  color: var(--color-text);
-  transition: background var(--transition-fast);
+  background: transparent;
+  color: var(--color-text-secondary);
+  transition: background var(--transition-fast), color var(--transition-fast);
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 40px;
-  box-shadow: var(--shadow-soft);
-}
-
-.button:hover {
-  background: var(--color-bg-warm);
-}
-
-/* Settings Button */
-#settings-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: var(--radius-sm);
-  color: white;
-  transition: all var(--transition-fast);
   min-width: 32px;
 }
 
-#settings-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+.button:hover {
+  background: var(--line);
+  color: var(--color-text);
 }
 
 #settings-btn svg {
@@ -286,59 +336,29 @@ body {
 }
 
 /* ==========================================================================
-   Floating Controls
+   Floating Controls (preview toolbar)
    ========================================================================== */
 
 .floating-controls {
-  position: fixed;
-  bottom: 28px;
-  right: 28px;
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
   display: flex;
-  gap: 10px;
+  gap: 2px;
+  padding: 3px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
   z-index: 100;
-  transform: translate3d(0, 0, 0);
 }
 
 .floating-controls .button {
+  width: 30px;
+  height: 30px;
   min-width: unset;
-  border-radius: 50%;
-}
-
-.zoom-button {
-  width: 36px;
-  height: 36px;
   padding: 0;
   font-size: 16px;
-  font-weight: 600;
-  border-radius: 50%;
-  background: white;
-  color: var(--color-sage-dark);
-  border: 1px solid var(--color-sage-light);
-  box-shadow: var(--shadow-soft);
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.zoom-button:hover {
-  background: var(--color-sage);
-  color: white;
-}
-
-.skill-button {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--color-sage);
-  color: white;
-  border: none;
-  box-shadow: var(--shadow-soft);
-  transition: background var(--transition-fast);
-}
-
-.skill-button:hover {
-  background: var(--color-sage-dark);
 }
 
 /* ==========================================================================
@@ -350,13 +370,13 @@ body {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .input-area input {
   flex: 1;
   height: 32px;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--line);
   resize: none;
   padding: 4px 12px;
   font-size: 13px;
@@ -364,9 +384,9 @@ body {
   outline: none;
   box-sizing: border-box;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-bg);
   color: var(--color-text);
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast);
 }
 
 .input-area input::placeholder {
@@ -374,8 +394,7 @@ body {
 }
 
 .input-area input:focus {
-  border-color: white;
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2);
+  border-color: var(--line-active);
 }
 
 /* ==========================================================================
@@ -389,18 +408,18 @@ body {
   width: 32px;
   height: 32px;
   padding: 0;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  color: white;
+  color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast);
   flex-shrink: 0;
 }
 
 .preset-button:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: var(--line);
+  color: var(--color-text);
 }
 
 .preset-card {
@@ -408,8 +427,8 @@ body {
   top: calc(100% + 12px);
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid rgba(143, 179, 143, 0.2);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-medium);
   z-index: 1000;
@@ -435,12 +454,12 @@ body {
 
 .preset-header {
   padding: 20px 20px 12px 20px;
-  border-bottom: 1px solid rgba(143, 179, 143, 0.15);
+  border-bottom: 1px solid var(--line);
 }
 
 .preset-header h3 {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 18px;
   font-weight: 600;
   color: var(--color-text);
@@ -469,7 +488,7 @@ body {
 }
 
 .preset-item:hover {
-  background: var(--color-sage-light);
+  background: var(--line-hover);
 }
 
 .preset-item-title {
@@ -495,8 +514,8 @@ body {
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid rgba(143, 179, 143, 0.2);
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: 24px;
   z-index: 1000;
@@ -529,7 +548,7 @@ body {
 
 .settings-title {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 18px;
   font-weight: 600;
   color: var(--color-text);
@@ -562,7 +581,7 @@ body {
 
 .settings-close:hover {
   color: var(--color-text);
-  background: var(--color-sage-light);
+  background: var(--line-hover);
 }
 
 .provider-cards {
@@ -577,7 +596,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 16px 8px;
-  border: 2px solid rgba(143, 179, 143, 0.25);
+  border: 2px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--color-bg);
   cursor: pointer;
@@ -585,12 +604,12 @@ body {
 }
 
 .provider-card:hover {
-  border-color: var(--color-sage-light);
+  border-color: var(--line-hover);
 }
 
 .provider-card.selected {
-  background: var(--color-sage-light);
-  border-color: var(--color-sage);
+  background: var(--line-hover);
+  border-color: var(--color-accent);
 }
 
 .provider-icon {
@@ -608,7 +627,7 @@ body {
 
 .settings-divider {
   height: 1px;
-  background: rgba(143, 179, 143, 0.2);
+  background: var(--line);
 }
 
 .form-group {
@@ -635,7 +654,7 @@ body {
 .settings-content input,
 .settings-content select {
   padding: 12px 14px;
-  border: 2px solid rgba(143, 179, 143, 0.25);
+  border: 2px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--color-bg);
   color: var(--color-text);
@@ -656,22 +675,22 @@ body {
 
 .settings-content input:focus,
 .settings-content select:focus {
-  border-color: var(--color-sage);
+  border-color: var(--color-accent);
   outline: none;
-  box-shadow: 0 0 0 4px rgba(143, 179, 143, 0.15);
-  background-color: white;
+  box-shadow: 0 0 0 3px rgba(32, 94, 166, 0.15);
+  background-color: var(--panel);
 }
 
 .settings-content input:hover,
 .settings-content select:hover {
-  border-color: var(--color-sage-light);
+  border-color: var(--line-hover);
 }
 
 .save-button {
   margin-top: 4px;
   width: 100%;
   padding: 12px 24px;
-  background: var(--color-sage);
+  background: var(--color-accent);
   color: white;
   border: none;
   border-radius: var(--radius-sm);
@@ -683,7 +702,7 @@ body {
 }
 
 .save-button:hover {
-  background: var(--color-sage-dark);
+  background: var(--color-accent-dark);
 }
 
 /* Settings Saved Message */
@@ -691,7 +710,7 @@ body {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  background: var(--color-sage);
+  background: var(--color-accent);
   color: white;
   padding: 16px 24px;
   border-radius: var(--radius-md);
@@ -724,12 +743,12 @@ body {
 }
 
 .toast-success {
-  background: var(--color-sage);
+  background: var(--color-accent);
   color: white;
 }
 
 .toast-error {
-  background: #dc3545;
+  background: var(--color-error);
   color: white;
 }
 
@@ -764,8 +783,8 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, rgba(244, 162, 97, 0.95) 0%, rgba(245, 198, 198, 0.95) 100%);
-  color: var(--color-text);
+  background: var(--color-error-soft);
+  color: var(--color-error);
   font-size: 14px;
   font-family: var(--font-body);
   padding: 32px;
@@ -785,20 +804,20 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 12px;
-  background: var(--color-coral-light);
-  border: 1.5px solid var(--color-coral);
+  padding: 6px 12px;
+  background: var(--color-warning-soft);
+  border: 1.5px solid var(--color-warning);
   border-radius: var(--radius-sm);
   color: var(--color-text);
   font-size: 12px;
   width: 100%;
   box-sizing: border-box;
-  height: 32px;
+  min-height: 32px;
 }
 
 .api-key-warning svg {
   flex-shrink: 0;
-  color: var(--color-coral);
+  color: var(--color-warning);
 }
 
 .api-key-warning span {
@@ -807,8 +826,8 @@ body {
 }
 
 .api-key-warning.error-state {
-  background: var(--color-rose);
-  border-color: #e57373;
+  background: var(--color-error-soft);
+  border-color: var(--color-error);
 }
 
 .fix-with-ai-button {
@@ -816,7 +835,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 4px 16px;
-  background: var(--color-sage);
+  background: var(--color-accent);
   color: white;
   border: none;
   border-radius: var(--radius-sm);
@@ -831,7 +850,7 @@ body {
 }
 
 .fix-with-ai-button:hover {
-  background: var(--color-sage-dark);
+  background: var(--color-accent-dark);
 }
 
 .fix-with-ai-button svg {
@@ -845,14 +864,14 @@ body {
    ========================================================================== */
 
 .yRemoteSelection {
-  background-color: rgba(201, 179, 232, 0.5);
+  background-color: rgba(94, 64, 157, 0.2);
 }
 
 .yRemoteSelectionHead {
   position: absolute;
-  border-left: var(--color-lavender) solid 2px;
-  border-top: var(--color-lavender) solid 2px;
-  border-bottom: var(--color-lavender) solid 2px;
+  border-left: var(--color-collab) solid 2px;
+  border-top: var(--color-collab) solid 2px;
+  border-bottom: var(--color-collab) solid 2px;
   height: 100%;
   box-sizing: border-box;
 }
@@ -860,7 +879,7 @@ body {
 .yRemoteSelectionHead::after {
   position: absolute;
   content: " ";
-  border: 3px solid var(--color-lavender);
+  border: 3px solid var(--color-collab);
   border-radius: 50%;
   left: -4px;
   top: -5px;
@@ -871,18 +890,18 @@ body {
    ========================================================================== */
 
 .mermaid-error-line {
-  background-color: rgba(244, 162, 97, 0.15) !important;
-  border-left: 3px solid var(--color-coral) !important;
+  background-color: rgba(188, 82, 21, 0.12) !important;
+  border-left: 3px solid var(--color-warning) !important;
 }
 
 .mermaid-error-glyph {
-  background-color: var(--color-coral) !important;
+  background-color: var(--color-warning) !important;
   width: 3px !important;
   border-radius: 2px;
 }
 
 .monaco-editor .hover-row .mermaid-error-line {
-  background-color: rgba(244, 162, 97, 0.2) !important;
+  background-color: rgba(188, 82, 21, 0.16) !important;
 }
 
 .monaco-editor .lines-content .view-lines .view-line .mermaid-error-line {
@@ -895,9 +914,9 @@ body {
 }
 
 .monaco-editor .monaco-hover .mermaid-error-hover {
-  border-left: 3px solid var(--color-coral);
+  border-left: 3px solid var(--color-warning);
   padding-left: 8px;
-  background-color: var(--color-coral-light);
+  background-color: var(--color-warning-soft);
   color: var(--color-text);
   font-weight: 500;
 }
@@ -908,15 +927,15 @@ body {
 }
 
 .monaco-editor .monaco-action-bar .action-item .action-label.codicon-lightbulb {
-  color: var(--color-sage) !important;
+  color: var(--color-accent) !important;
 }
 
 .monaco-editor .suggest-widget .monaco-list .monaco-list-row.focused {
-  background-color: var(--color-sage-light) !important;
+  background-color: var(--line-hover) !important;
 }
 
 .monaco-editor .suggest-widget .monaco-list .monaco-list-row .suggest-icon.codicon-lightbulb {
-  color: var(--color-sage) !important;
+  color: var(--color-accent) !important;
 }
 
 /* ==========================================================================
@@ -936,12 +955,12 @@ body {
 }
 
 .skill-modal-content {
-  background: white;
+  background: var(--panel);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-medium);
   padding: 24px;
   width: 340px;
-  border: 1px solid rgba(143, 179, 143, 0.2);
+  border: 1px solid var(--line);
 }
 
 .skill-modal-header {
@@ -953,7 +972,7 @@ body {
 
 .skill-modal-header h3 {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 18px;
   font-weight: 600;
   color: var(--color-text);
@@ -978,7 +997,7 @@ body {
 
 .skill-modal-close:hover {
   color: var(--color-text);
-  background: var(--color-sage-light);
+  background: var(--line-hover);
 }
 
 .skill-modal-description {
@@ -1000,9 +1019,9 @@ body {
   justify-content: center;
   gap: 10px;
   padding: 10px 16px;
-  border: 1px solid var(--color-sage-light);
+  border: 1px solid var(--line-hover);
   border-radius: var(--radius-sm);
-  background: white;
+  background: var(--panel);
   color: var(--color-text);
   font-size: 14px;
   font-family: var(--font-body);
@@ -1016,18 +1035,18 @@ body {
 }
 
 .skill-action-btn.primary {
-  background: var(--color-sage);
+  background: var(--color-accent);
   border: none;
   color: white;
 }
 
 .skill-action-btn.primary:hover {
-  background: var(--color-sage-dark);
+  background: var(--color-accent-dark);
 }
 
 .skill-action-btn.success {
-  background: var(--color-sage);
-  border-color: var(--color-sage);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
   color: white;
 }
 
@@ -1047,28 +1066,12 @@ body {
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: 11px;
-  color: var(--color-sage-dark);
+  color: var(--color-accent-dark);
 }
 
 /* ==========================================================================
    Share Modal
    ========================================================================== */
-
-.share-button {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--color-lavender);
-  color: white;
-  border: none;
-  box-shadow: var(--shadow-soft);
-  transition: background var(--transition-fast);
-}
-
-.share-button:hover {
-  background: #b8a0d8;
-}
 
 .share-modal {
   position: fixed;
@@ -1083,12 +1086,12 @@ body {
 }
 
 .share-modal-content {
-  background: white;
+  background: var(--panel);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-medium);
   padding: 24px;
   width: 320px;
-  border: 1px solid rgba(143, 179, 143, 0.2);
+  border: 1px solid var(--line);
 }
 
 .share-modal-header {
@@ -1100,7 +1103,7 @@ body {
 
 .share-modal-header h3 {
   margin: 0;
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   font-size: 18px;
   font-weight: 600;
   color: var(--color-text);
@@ -1125,7 +1128,7 @@ body {
 
 .share-modal-close:hover {
   color: var(--color-text);
-  background: var(--color-sage-light);
+  background: var(--line-hover);
 }
 
 .share-modal-actions {
@@ -1140,9 +1143,9 @@ body {
   justify-content: center;
   gap: 10px;
   padding: 12px 16px;
-  border: 1px solid var(--color-sage-light);
+  border: 1px solid var(--line-hover);
   border-radius: var(--radius-sm);
-  background: white;
+  background: var(--panel);
   color: var(--color-text);
   font-size: 14px;
   font-family: var(--font-body);
@@ -1156,18 +1159,18 @@ body {
 }
 
 .share-action-btn.primary {
-  background: var(--color-sage);
+  background: var(--color-accent);
   border: none;
   color: white;
 }
 
 .share-action-btn.primary:hover {
-  background: var(--color-sage-dark);
+  background: var(--color-accent-dark);
 }
 
 .share-action-btn.success {
-  background: var(--color-sage);
-  border-color: var(--color-sage);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
   color: white;
 }
 
@@ -1182,7 +1185,7 @@ body {
 .share-url-preview input {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--color-sage-light);
+  border: 1px solid var(--line-hover);
   border-radius: var(--radius-sm);
   font-size: 12px;
   font-family: var(--font-mono);
@@ -1193,7 +1196,7 @@ body {
 
 .share-url-preview input:focus {
   outline: none;
-  border-color: var(--color-sage);
+  border-color: var(--color-accent);
 }
 
 /* ==========================================================================
@@ -1212,14 +1215,7 @@ body {
     flex: 1 1 100%;
   }
 
-  .floating-controls {
-    bottom: 16px;
-    right: 16px;
-    gap: 8px;
-  }
-
-  .zoom-button,
-  .skill-button {
+  .floating-controls .button {
     width: 40px;
     height: 40px;
   }
@@ -1239,12 +1235,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-sage-light);
+  background: var(--line-hover);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-sage);
+  background: var(--color-accent);
 }
 
 /* ==========================================================================
@@ -1252,12 +1248,12 @@ body {
    ========================================================================== */
 
 ::selection {
-  background: var(--color-sage-light);
+  background: var(--line-hover);
   color: var(--color-text);
 }
 
 ::-moz-selection {
-  background: var(--color-sage-light);
+  background: var(--line-hover);
   color: var(--color-text);
 }
 

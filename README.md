@@ -87,7 +87,7 @@ The project uses several key technologies:
 
 - Vite + TypeScript for development
 - Monaco Editor for code editing
-- Mermaid.js for diagram rendering
+- [pele](https://pele.run) for diagram rendering
 - Liveblocks + Yjs for collaboration
 - LZ-String for URL compression
 

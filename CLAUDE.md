@@ -30,7 +30,7 @@ MinimalMermaid is a browser-based Mermaid diagram editor built with TypeScript, 
 - `AIHandler`: Manages Google Gemini AI integration for diagram generation
 - `CollaborationHandler`: Handles real-time collaboration via Liveblocks + Y.js
 - `Monaco Editor`: Code editor with custom Mermaid language support
-- `Mermaid.js`: Diagram rendering engine
+- `pele`: Mermaid-syntax to SVG renderer (`render()` throws `PeleError` with line/column on invalid syntax)
 
 ### Key Technical Patterns
 - **Lazy Loading**: Monaco Editor is dynamically imported to reduce initial bundle size
@@ -46,7 +46,10 @@ src/
 ├── ai-handler.ts             # Google Gemini AI integration
 ├── collaboration.ts          # Real-time collaboration via Liveblocks/Y.js
 ├── config.ts                 # Configuration constants (editor, AI, Mermaid)
-├── configMermaidLanguage.ts  # Monaco Editor Mermaid language definition
+├── configMermaidLanguage.ts  # Monaco Editor Mermaid language definition (themes, completions)
+├── mermaid-highlight.ts      # Syntax tokenizer copied from pele (MIT); keep close to upstream
+├── mermaid-tokens.ts         # Monaco token adapter; colors the keywords of the declared diagram
+├── mermaid-keywords.ts       # Keywords per diagram type (autocomplete + highlighting)
 ├── types.ts                  # TypeScript type definitions
 ├── utils.ts                  # Utility functions (debounce, compression, storage)
 ├── events.ts                 # Central event bus with type-safe event system
@@ -94,7 +97,7 @@ The application uses a central event bus (`eventBus` from `events.ts`) for compo
 ## Important Implementation Notes
 
 ### Monaco Editor Integration
-- Custom Mermaid language support defined in `configMermaidLanguage.ts`
+- Custom Mermaid language support defined in `configMermaidLanguage.ts`; syntax highlighting comes from `mermaid-highlight.ts` + `mermaid-tokens.ts` via `setTokensProvider`; keywords per diagram live in `mermaid-keywords.ts`
 - Dynamic import pattern used to reduce bundle size
 - Custom themes and syntax highlighting for Mermaid diagrams
 - Error markers displayed inline with line/column information
@@ -129,7 +132,7 @@ VITE_GOOGLE_AI_API_KEY=your_google_ai_key          # Optional: fallback for AI f
 ```
 
 ### Browser Compatibility
-- Modern browsers with ES2020 support
+- Modern browsers with ES2022 support (`String.prototype.at`/`replaceAll`)
 - WebSocket support required for collaboration
 - Local Storage required for settings persistence
 

@@ -1,4 +1,4 @@
-import mermaid from "mermaid";
+import { render } from "pele";
 import svgPanZoom from "svg-pan-zoom";
 import "./modern-normalize.css";
 import "./style.css";
@@ -6,7 +6,6 @@ import { EditorState, EditorElements } from "./types";
 import {
   EDITOR_CONFIG,
   MONACO_CONFIG,
-  MERMAID_CONFIG,
   CREATION_PRESETS,
   MODIFICATION_PRESETS,
   AI_CONFIG,
@@ -163,6 +162,12 @@ class MermaidEditor {
       ...MONACO_CONFIG,
     });
 
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+    const applyEditorTheme = () =>
+      this.monaco.editor.setTheme(prefersDark.matches ? "mermaid-dark" : "mermaid");
+    applyEditorTheme();
+    prefersDark.addEventListener("change", applyEditorTheme);
+
     const resizeObserver = new ResizeObserver(() => {
       requestAnimationFrame(() => {
         this.editor.layout();
@@ -211,8 +216,6 @@ class MermaidEditor {
   }
 
   private initializeMermaid(): void {
-    mermaid.initialize(MERMAID_CONFIG);
-
     const code = loadDiagramFromURL();
     if (code && code.trim().length > 0) {
       this.renderMermaidDiagram(code);
@@ -263,7 +266,7 @@ class MermaidEditor {
   private setupAppEventListeners(): void {
     // Listen for editor changes to trigger diagram rendering
     EventHelpers.safeListen("editor:change", async ({ code }) => {
-      await this.renderMermaidDiagram(code);
+      this.renderMermaidDiagram(code);
     });
 
     // Listen for AI completion to trigger diagram update
@@ -273,7 +276,7 @@ class MermaidEditor {
 
     // Listen for diagram render requests
     EventHelpers.safeListen("diagram:render", async ({ code }) => {
-      await this.renderMermaidDiagram(code);
+      this.renderMermaidDiagram(code);
     });
 
     // Listen for app loading state changes
@@ -518,7 +521,9 @@ class MermaidEditor {
   private handleMouseMove = (e: MouseEvent): void => {
     if (!state.isResizing) return;
     const containerWidth = this.elements.container.clientWidth;
-    const newWidth = (e.clientX / containerWidth) * 100;
+    const handleCenter = this.elements.handle.offsetWidth / 2;
+    const paneLeft = this.elements.editorPane.getBoundingClientRect().left;
+    const newWidth = ((e.clientX - paneLeft - handleCenter) / containerWidth) * 100;
     const clampedWidth = Math.max(newWidth, EDITOR_CONFIG.minWidth);
     this.elements.editorPane.style.flexBasis = `${clampedWidth}%`;
   };
@@ -526,7 +531,7 @@ class MermaidEditor {
   /**
    * Render Mermaid diagram with error handling and UI updates
    */
-  private async renderMermaidDiagram(code: string): Promise<void> {
+  private renderMermaidDiagram(code: string): void {
     try {
       this.clearPreview();
 
@@ -535,7 +540,7 @@ class MermaidEditor {
         return;
       }
 
-      await this.validateAndRenderDiagram(code);
+      this.validateAndRenderDiagram(code);
     } catch (error) {
       this.handleRenderError(error, code);
     }
@@ -556,33 +561,18 @@ class MermaidEditor {
   }
 
   /**
-   * Validate and render the Mermaid diagram
+   * Render the Mermaid diagram to SVG with pele (throws PeleError on invalid syntax)
    */
-  private async validateAndRenderDiagram(code: string): Promise<void> {
-    if (!(await mermaid.parse(code))) {
-      throw new Error("Invalid diagram syntax");
-    }
-
-    const tempDiv = this.createTempRenderDiv();
-    const result = await mermaid.render("mermaid-diagram", code, tempDiv);
-
-    requestAnimationFrame(() => {
-      this.updatePreviewWithSVG(result.svg);
-      this.setupPanZoom();
-      EventHelpers.safeEmit("diagram:rendered", { svg: result.svg });
-      document.body.removeChild(tempDiv);
+  private validateAndRenderDiagram(code: string): void {
+    const { svg } = render(code, {
+      responsive: false,
+      fontFamily: getComputedStyle(this.elements.mermaidPreview).fontFamily,
+      fontFamilyMono: getComputedStyle(this.elements.mermaidPreview).getPropertyValue("--font-mono").trim(),
     });
-  }
 
-  /**
-   * Create temporary div for Mermaid rendering
-   */
-  private createTempRenderDiv(): HTMLDivElement {
-    const tempDiv = document.createElement("div");
-    tempDiv.style.position = "absolute";
-    tempDiv.style.visibility = "hidden";
-    document.body.appendChild(tempDiv);
-    return tempDiv;
+    this.updatePreviewWithSVG(svg);
+    this.setupPanZoom();
+    EventHelpers.safeEmit("diagram:rendered", { svg });
   }
 
   /**

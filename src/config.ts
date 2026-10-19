@@ -30,13 +30,6 @@ export const AI_CONFIG: AIConfig = {
 };
 
 /**
- * Configuration for Mermaid diagram rendering
- */
-export const MERMAID_CONFIG = {
-  startOnLoad: false,
-};
-
-/**
  * Configuration for Monaco Editor settings and features
  */
 export const MONACO_CONFIG = {
@@ -50,7 +43,12 @@ export const MONACO_CONFIG = {
   lineNumbers: "on",
   lineNumbersMinChars: 3,
   lineDecorationsWidth: 10,
-  renderLineHighlight: "all",
+  renderLineHighlight: "line",
+  overviewRulerBorder: false,
+  hideCursorInOverviewRuler: true,
+  fontFamily: 'ui-monospace, SFMono-Regular, "Cascadia Code", Menlo, Monaco, Consolas, monospace',
+  fontSize: 13,
+  padding: { top: 12, bottom: 12 },
 };
 
 /**

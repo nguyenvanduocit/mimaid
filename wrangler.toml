@@ -5,8 +5,3 @@ compatibility_date = "2026-05-01"
 [[kv_namespaces]]
 binding = "SHORTLINKS"
 id = "01144d3d1a51419794251f2f568d3793"
-
-[[ratelimits]]
-name = "SHORTEN_LIMITER"
-namespace_id = "1001"
-simple = { limit = 10, period = 60 }

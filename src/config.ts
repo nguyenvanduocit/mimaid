@@ -1,4 +1,4 @@
-import { EditorConfig, AIConfig, AIProviderType } from "./types";
+import { EditorConfig } from "./types";
 
 /**
  * Configuration for editor functionality and constraints
@@ -8,25 +8,6 @@ export const EDITOR_CONFIG: EditorConfig = {
   maxScale: 20,
   minWidth: 20,
   zoomFactor: 0.1,
-};
-
-/**
- * Default models for each AI provider
- */
-export const DEFAULT_MODELS: Record<AIProviderType, string> = {
-  google: "gemini-2.5-pro",
-  openai: "gpt-4o",
-  anthropic: "claude-sonnet-4-20250514",
-};
-
-/**
- * Configuration for AI integration and generation parameters
- */
-export const AI_CONFIG: AIConfig = {
-  provider: (localStorage.getItem("aiProvider") as AIProviderType) || "google",
-  apiKey: localStorage.getItem("aiApiKey") || "",
-  model: localStorage.getItem("aiModel") || DEFAULT_MODELS.google,
-  temperature: 1,
 };
 
 /**

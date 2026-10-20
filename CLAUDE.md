@@ -27,7 +27,8 @@ MinimalMermaid is a browser-based Mermaid diagram editor built with TypeScript, 
 
 **Main Components:**
 - `MermaidEditor`: Main application controller that orchestrates all components
-- `AIHandler`: Manages Google Gemini AI integration for diagram generation
+- `AIHandler`: Prompts the user's agent for diagram generation and streams the reply into the editor
+- `Agentd`: The agentd daemon connection (detect, connect, selected agent) and the one open ACP chat
 - `CollaborationHandler`: Handles real-time collaboration via Liveblocks + Y.js
 - `Monaco Editor`: Code editor with custom Mermaid language support
 - `pele`: Mermaid-syntax to SVG renderer (`render()` throws `PeleError` with line/column on invalid syntax)
@@ -43,7 +44,10 @@ MinimalMermaid is a browser-based Mermaid diagram editor built with TypeScript, 
 ```
 src/
 ├── main.ts                    # Application entry point & MermaidEditor class
-├── ai-handler.ts             # Google Gemini AI integration
+├── agentd.ts                 # agentd connection state, panel model, selected agent, open chat
+├── agent-chat.ts             # ACP session over a stream: streams text, cancels tool permissions
+├── ai-handler.ts             # Diagram generation through the agent chat
+├── ai-prompt.ts              # Agent prompt (instructions + current diagram) and mermaid block extraction
 ├── collaboration.ts          # Real-time collaboration via Liveblocks/Y.js
 ├── config.ts                 # Configuration constants (editor, AI, Mermaid)
 ├── configMermaidLanguage.ts  # Monaco Editor Mermaid language definition (themes, completions)
@@ -81,15 +85,17 @@ The application uses a central event bus (`eventBus` from `events.ts`) for compo
 - **Editor State**: Managed by Monaco Editor instance
 - **Application State**: Simple object-based state in `MermaidEditor`
 - **Collaboration State**: Y.js shared document for multi-user editing
-- **Persistence**: Local Storage for API keys and preferences, URL hash for diagram sharing
+- **Persistence**: Local Storage for the selected agent and preferences, URL hash for diagram sharing
 
 ### AI Integration Details
-- Uses Google's Gemini 2.5 Pro model via `@google/genai`
-- Streaming responses for real-time code generation
-- Context-aware prompts that include current diagram code
-- API key stored in localStorage with fallback to environment variables
-- Supports Google Search grounding and URL context analysis
-- System prompt ensures valid Mermaid syntax and encourages colorful diagrams
+- AI runs on the user's computer through agentd (`@agentd/client`, pinned to a release file in `package.json`) in browser mode: the page asks the daemon for a grant (its dialog also asks for a folder), opens a session with an agent (Claude Code, Codex, Grok) and speaks ACP (`@agentclientprotocol/sdk`) over the session's streams
+- `agent-chat.ts` takes any ACP `Stream`, so tests run it against a fake agent over in-memory streams; `agentd.ts` holds the pure state logic (`readyAgents`, `pickAgent`, `panelOf`) beside the `Agentd` class that owns I/O
+- One chat stays open across prompts; each prompt carries the instructions and the current diagram (`buildAgentPrompt`), so the agent keeps no state the editor does not show
+- The reply streams as `session/update` message chunks; `extractMermaid` reads the first ```mermaid block as it arrives
+- The prompt tells the agent not to use tools and the page answers every `session/request_permission` with "cancelled". An agent whose own mode asks for no permission (Claude Code reports `mode: auto`) is not stopped by that, so the folder the user picks in agentd's dialog is the real boundary
+- The model is the agent's own config option (`category: "model"` in `session/new`'s `configOptions`, switched with `session/set_config_option`); `openAgentChat` returns it as `chat.model`, and the choice is kept per agent in localStorage (`agentdModel:<agent>`). The panel lists models while it is open, since they come from a running session
+- The settings panel is a function of the connection state (`panelOf`); the page looks for the daemon when the panel opens, or at load when the user connected before (the browser asks before a page reaches a local program)
+- The agentd origin rule applies: the page's origin is https or loopback http
 
 ### Collaboration Architecture
 - Room-based collaboration via URL parameters (`?room=name&name=user`)
@@ -122,17 +128,16 @@ The application uses a central event bus (`eventBus` from `events.ts`) for compo
 - Monaco Editor lazy loading on initialization
 
 ### Security Considerations
-- API keys stored client-side only (localStorage)
+- No AI credentials in the page: the agent on the user's computer holds them
 - No server-side data persistence
 - Input sanitization for AI prompts
-- HTTPS-only external API calls
+- The page reaches agentd only on `127.0.0.1`; a grant lasts 30 days
 
 ## Environment Setup
 
 ### Required Environment Variables
 ```bash
 VITE_LIVEBLOCKS_PUBLIC_API_KEY=your_liveblocks_key  # Optional: for collaboration
-VITE_GOOGLE_AI_API_KEY=your_google_ai_key          # Optional: fallback for AI features
 ```
 
 ### Browser Compatibility

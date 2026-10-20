@@ -1,31 +1,13 @@
-import { streamText, LanguageModel } from "ai";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { createOpenAI } from "@ai-sdk/openai";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { AI_CONFIG } from "./config";
-import { AIProviderType } from "./types";
+import type { Agentd } from "./agentd";
 import { EventHelpers } from "./events";
-import { buildAIMessages, AIMessage } from "./ai-messages";
+import { buildAgentPrompt, extractMermaid } from "./ai-prompt";
 
 /**
- * Get the AI model instance based on provider configuration
- */
-function getModel(provider: AIProviderType, apiKey: string, modelId: string): LanguageModel {
-  switch (provider) {
-    case "google":
-      return createGoogleGenerativeAI({ apiKey })(modelId);
-    case "openai":
-      return createOpenAI({ apiKey })(modelId);
-    case "anthropic":
-      return createAnthropic({ apiKey })(modelId);
-  }
-}
-
-/**
- * Handles AI-powered diagram generation using multiple providers via Vercel AI SDK
+ * Handles AI-powered diagram generation by prompting an agent on the user's computer through agentd
  */
 export class AIHandler {
   private editor: any;
+  private agentd: Agentd;
   private elements: {
     inputField: HTMLTextAreaElement | HTMLInputElement;
     inputArea: HTMLDivElement;
@@ -39,9 +21,11 @@ export class AIHandler {
       inputArea: HTMLDivElement;
       generationStatus: HTMLSpanElement;
     },
+    agentd: Agentd,
   ) {
     this.editor = editor;
     this.elements = elements;
+    this.agentd = agentd;
     this.setupEventListeners();
   }
 
@@ -81,25 +65,18 @@ Please provide the modified Mermaid diagram code.`;
 
     try {
       this.startGeneration(prompt);
-      const currentCode = this.editor.getValue();
-      const messages = this.buildMessages(prompt, currentCode);
+      const chat = await this.agentd.openChat();
 
-      const model = getModel(AI_CONFIG.provider, AI_CONFIG.apiKey, AI_CONFIG.model);
-
-      const result = streamText({
-        model,
-        system: this.getSystemPrompt(),
-        messages,
-        temperature: AI_CONFIG.temperature,
+      let reply = "";
+      let shownCode = "";
+      await chat.prompt(buildAgentPrompt(prompt, this.editor.getValue()), (piece) => {
+        reply += piece;
+        const code = extractMermaid(reply);
+        if (code && code !== shownCode) {
+          shownCode = code;
+          this.editor.setValue(code);
+        }
       });
-
-      // Consume both the stream and the response promise.
-      // Some providers throw errors in the internal retry chain
-      // that don't propagate through textStream.
-      await Promise.all([
-        this.handleStream(result),
-        result.response,
-      ]);
 
       inputField.value = "";
       EventHelpers.safeEmit("ai:complete", { code: this.editor.getValue() });
@@ -116,56 +93,12 @@ Please provide the modified Mermaid diagram code.`;
     this.setLoadingState(true);
   }
 
-  private buildMessages(prompt: string, currentCode: string): AIMessage[] {
-    return buildAIMessages(prompt, currentCode);
-  }
-
-  private getSystemPrompt(): string {
-    return `You are a Mermaid diagram expert. Generate valid Mermaid v11 code only.
-
-🚨 CRITICAL - NO MARKDOWN IN MERMAID (THIS CAUSES 90% OF ERRORS):
-Mermaid is NOT markdown. These will BREAK your diagram:
-❌ **bold** - NEVER use double asterisks
-❌ *italic* - NEVER use single asterisks
-❌ _underscore_ - NEVER use underscores for emphasis
-❌ [link](url) - NEVER use markdown links
-❌ \`code\` - NEVER use backticks inside labels
-❌ # headers - NEVER use hash headers
-
-✅ CORRECT: A[User clicks button]
-❌ WRONG: A[User **clicks** button]
-❌ WRONG: A[User _clicks_ button]
-❌ WRONG: A[See [docs](url)]
-
-USE MERMAID v11 SYNTAX:
-- Use \`flowchart\` NOT \`graph\`
-- Use shape syntax: \`A@{ shape: diamond, label: "Decision" }\`
-- Shapes: rect, rounded, stadium, diamond, hex, cyl, doc, docs, delay, trap-t, trap-b, fork, cloud, odd
-
-STYLING (use these instead of markdown):
-- Colors: style A fill:#4CAF50,stroke:#2E7D32
-- Classes: classDef highlight fill:#ff0,stroke:#333
-- Edges: linkStyle 0 stroke:#f00
-
-RENDERER LIMITS (pele renderer):
-- Colors come only from style, classDef and linkStyle. NEVER use %%{init}%% theme or themeVariables - they are ignored.
-- No HTML tags in labels. No click callbacks.
-
-Response format:
-\`\`\`mermaid
-flowchart TD
-    A[Plain text only] --> B[No markdown]
-\`\`\`
-
-FINAL CHECK: Before outputting, scan for **, *, _, [], \`\` - if found, REMOVE them.`;
-  }
-
   private handleGenerationError(error: unknown): void {
     console.error("Error processing prompt:", error);
     const errorMessage =
       error instanceof Error
         ? error.message
-        : "Failed to process prompt with AI. Check your API key";
+        : "Failed to process prompt with AI. Check that agentd is running";
 
     EventHelpers.safeEmit("ai:error", { error: errorMessage });
   }
@@ -173,43 +106,6 @@ FINAL CHECK: Before outputting, scan for **, *, _, [], \`\` - if found, REMOVE t
   private finishGeneration(): void {
     this.setLoadingState(false);
     EventHelpers.safeEmit("app:loading", { isLoading: false });
-  }
-
-  private async handleStream(result: ReturnType<typeof streamText>): Promise<void> {
-    let fullResponse = "";
-    let state: "waiting" | "collecting" | "done" = "waiting";
-    let code = "";
-
-    const OPEN_MARKER = "```mermaid\n";
-    const CLOSE_MARKER = "```";
-
-    for await (const chunk of result.textStream) {
-      fullResponse += chunk;
-
-      if (state === "done") continue;
-
-      if (state === "waiting") {
-        const openIdx = fullResponse.indexOf(OPEN_MARKER);
-        if (openIdx === -1) continue;
-        state = "collecting";
-        code = fullResponse.slice(openIdx + OPEN_MARKER.length);
-      } else {
-        code += chunk;
-      }
-
-      const closeIdx = code.indexOf(CLOSE_MARKER);
-      if (closeIdx !== -1) {
-        code = code.slice(0, closeIdx);
-        state = "done";
-      }
-
-      this.editor.setValue(code.trim());
-    }
-
-    // If stream ended mid-block, use whatever we collected
-    if (state === "collecting" && code.trim()) {
-      this.editor.setValue(code.trim());
-    }
   }
 
   private setLoadingState(loading: boolean): void {

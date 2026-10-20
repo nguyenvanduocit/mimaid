@@ -21,12 +21,10 @@
     "vitest": "^2.1.0"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.9",
-    "@ai-sdk/google": "^3.0.6",
-    "@ai-sdk/openai": "^3.0.7",
+    "@agentclientprotocol/sdk": "^1.9.0",
+    "@agentd/client": "https://github.com/nguyenvanduocit/agentd/releases/download/v0.6.0/agentd-client-0.5.0.tgz",
     "@liveblocks/client": "^2.11.0",
     "@liveblocks/yjs": "^2.11.0",
-    "ai": "^6.0.27",
     "lz-string": "^1.5.0",
     "mitt": "^3.0.1",
     "monaco-editor": "^0.52.0",

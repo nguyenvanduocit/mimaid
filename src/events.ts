@@ -1,5 +1,5 @@
 import mitt from "mitt";
-import { Preset, AIProviderType } from "./types";
+import { Preset } from "./types";
 
 // Define all event types for type safety
 export type AppEvents = {
@@ -24,7 +24,6 @@ export type AppEvents = {
   // UI events
   "ui:preset:select": { preset: Preset; isModification: boolean };
   "ui:settings:open": {};
-  "ui:settings:save": { provider: AIProviderType; apiKey: string; model: string };
   "ui:zoom": { direction: "in" | "out" };
   "ui:input:submit": { prompt: string };
   "ui:fixWithAI": {};

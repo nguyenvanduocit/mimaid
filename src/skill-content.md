@@ -134,7 +134,7 @@ Supported diagram types:
 
 ## Features
 
-- **AI-Powered**: Generate diagrams using natural language with Google Gemini
+- **AI-Powered**: Generate diagrams using natural language through the coding agents on your computer (agentd)
 - **Real-time Collaboration**: Multiple users can edit simultaneously
 - **Auto-Save**: URL updates automatically as you type
 - **Pan & Zoom**: Navigate large diagrams easily

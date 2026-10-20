@@ -8,10 +8,9 @@ import {
   MONACO_CONFIG,
   CREATION_PRESETS,
   MODIFICATION_PRESETS,
-  AI_CONFIG,
-  DEFAULT_MODELS,
 } from "./config";
-import { AIProviderType } from "./types";
+import { desktopDownloads } from "@agentd/client";
+import { Agentd, panelOf } from "./agentd";
 import { AIHandler } from "./ai-handler";
 import { createShortLink } from "./short-link";
 import { registerWebMcpTools } from "./webmcp";
@@ -28,7 +27,6 @@ import { EventHelpers } from "./events";
 import { SKILL_CONTENT } from "./skill-content";
 import { showToast } from "./ui/Toast";
 import { setupModalDismiss } from "./ui/Modal";
-import { fetchModelsForProvider } from "./ai/ProviderModels";
 
 let monacoInstance: any | null = null;
 
@@ -56,6 +54,7 @@ const state: EditorState = {
 class MermaidEditor {
   private editor!: any;
   private elements!: EditorElements;
+  private agentd = new Agentd();
   private aiHandler: AIHandler | null = null;
   private collaborationHandler!: CollaborationHandler;
   private panZoomInstance: any;
@@ -205,15 +204,11 @@ class MermaidEditor {
     const inputField = document.querySelector<HTMLInputElement>("#input-field")!;
     const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
 
-    // Only initialize AI handler if API key is available
-    const apiKey = localStorage.getItem("aiApiKey") || "";
-    if (apiKey && apiKey.trim().length > 0) {
-      this.aiHandler = new AIHandler(this.editor, {
-        inputField,
-        inputArea,
-        generationStatus: this.elements.generationStatus,
-      });
-    }
+    this.aiHandler = new AIHandler(
+      this.editor,
+      { inputField, inputArea, generationStatus: this.elements.generationStatus },
+      this.agentd,
+    );
 
     // Lazy load collaboration handler
     if (window.location.search.includes("room")) {
@@ -324,179 +319,98 @@ class MermaidEditor {
     const settingsBtn = document.querySelector<HTMLButtonElement>("#settings-btn")!;
     const settingsDialog = document.querySelector<HTMLDivElement>("#settings-dialog")!;
     const settingsClose = document.querySelector<HTMLButtonElement>("#settings-close")!;
-    const saveSettingsBtn = document.querySelector<HTMLButtonElement>("#save-settings")!;
-    const providerCards = document.querySelectorAll<HTMLButtonElement>(".provider-card");
-    const apiTokenInput = document.querySelector<HTMLInputElement>("#api-token")!;
-    const modelIdSelect = document.querySelector<HTMLSelectElement>("#model-id")!;
-    const modelHint = document.querySelector<HTMLElement>("#model-hint")!;
+    const message = document.querySelector<HTMLElement>("#agentd-message")!;
+    const downloads = document.querySelector<HTMLElement>("#agentd-downloads")!;
+    const appleSiliconLink = document.querySelector<HTMLAnchorElement>("#download-apple-silicon")!;
+    const intelLink = document.querySelector<HTMLAnchorElement>("#download-intel")!;
+    const agentGroup = document.querySelector<HTMLElement>("#agent-group")!;
+    const agentSelect = document.querySelector<HTMLSelectElement>("#agent-select")!;
+    const modelGroup = document.querySelector<HTMLElement>("#model-group")!;
+    const modelSelect = document.querySelector<HTMLSelectElement>("#model-select")!;
+    const actionButton = document.querySelector<HTMLButtonElement>("#agentd-action")!;
 
-    let modelsFetched = false;
-    let currentFetchProvider: AIProviderType | null = null;
-    let selectedProvider: AIProviderType = (localStorage.getItem("aiProvider") as AIProviderType) || "google";
-
-    const API_KEY_PLACEHOLDERS: Record<AIProviderType, string> = {
-      google: "Enter your Google AI API key",
-      openai: "Enter your OpenAI API key",
-      anthropic: "Enter your Anthropic API key",
-    };
-
-    const clearSelectOptions = (select: HTMLSelectElement) => {
-      while (select.firstChild) {
-        select.removeChild(select.firstChild);
-      }
-    };
-
-    const addSelectOption = (select: HTMLSelectElement, value: string, text: string) => {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = text;
-      select.appendChild(option);
-    };
-
-    const selectProviderCard = (provider: AIProviderType) => {
-      selectedProvider = provider;
-      providerCards.forEach((card) => {
-        card.classList.toggle("selected", card.dataset.provider === provider);
-      });
-      apiTokenInput.placeholder = API_KEY_PLACEHOLDERS[provider];
-
-      // Reset model fetch state when provider changes
-      modelsFetched = false;
-      clearSelectOptions(modelIdSelect);
-      addSelectOption(modelIdSelect, DEFAULT_MODELS[provider], DEFAULT_MODELS[provider]);
-      modelIdSelect.value = DEFAULT_MODELS[provider];
-      modelHint.textContent = "Click to fetch available models";
-    };
-
-    // Load saved settings
-    const savedModel = localStorage.getItem("aiModel") || DEFAULT_MODELS[selectedProvider];
-    apiTokenInput.value = localStorage.getItem("aiApiKey") || "";
-
-    // Set initial provider card selection
-    selectProviderCard(selectedProvider);
-
-    // Set initial model option
-    clearSelectOptions(modelIdSelect);
-    addSelectOption(modelIdSelect, savedModel, savedModel);
-    modelIdSelect.value = savedModel;
-    modelHint.textContent = "Click to fetch available models";
-
-    // Fetch models from API
-    const fetchModels = async (provider: AIProviderType, apiKey: string) => {
-      if (!apiKey) {
-        modelHint.textContent = "Enter API key first";
-        return;
-      }
-
-      clearSelectOptions(modelIdSelect);
-      addSelectOption(modelIdSelect, "", "Loading models...");
-      modelIdSelect.disabled = true;
-      modelHint.textContent = "Fetching models...";
-
+    // The models come from the agent's own session, so this starts the agent: only while the panel is open.
+    const renderModels = async () => {
+      const agent = this.agentd.agent();
+      modelGroup.hidden = true;
+      if (!agent || settingsDialog.classList.contains("hidden")) return;
       try {
-        const models = await fetchModelsForProvider(provider, apiKey);
-        clearSelectOptions(modelIdSelect);
-
-        models.forEach((model) => {
-          addSelectOption(modelIdSelect, model, model);
-        });
-
-        // Select saved model or default
-        const currentModel = savedModel || DEFAULT_MODELS[provider];
-        if (models.includes(currentModel)) {
-          modelIdSelect.value = currentModel;
-        } else if (models.length > 0) {
-          modelIdSelect.value = models[0];
-        }
-
-        modelsFetched = true;
-        currentFetchProvider = provider;
-        modelHint.textContent = `${models.length} models available`;
+        const { model } = await this.agentd.openChat();
+        if (this.agentd.agent()?.name !== agent.name) return; // the user chose another agent meanwhile
+        modelGroup.hidden = !model;
+        if (!model) return;
+        modelSelect.replaceChildren(...model.options.map((option) => new Option(option.name, option.value)));
+        modelSelect.value = model.current;
       } catch (error) {
-        console.error("Failed to fetch models:", error);
-        clearSelectOptions(modelIdSelect);
-        addSelectOption(modelIdSelect, DEFAULT_MODELS[provider], DEFAULT_MODELS[provider]);
-        modelIdSelect.value = DEFAULT_MODELS[provider];
-        modelHint.textContent = "Failed to fetch models - using default";
-      } finally {
-        modelIdSelect.disabled = false;
+        message.textContent = `Could not start ${agent.title}: ${error instanceof Error ? error.message : String(error)}`;
       }
     };
 
-    // Fetch models when clicking on select
-    modelIdSelect.addEventListener("focus", () => {
-      const apiKey = apiTokenInput.value.trim();
-      if (!modelsFetched || currentFetchProvider !== selectedProvider) {
-        fetchModels(selectedProvider, apiKey);
+    let action = panelOf(this.agentd.daemon.state).action;
+    const renderPanel = () => {
+      const panel = panelOf(this.agentd.daemon.state);
+      action = panel.action;
+      message.textContent = panel.message;
+
+      const links = desktopDownloads();
+      downloads.hidden = panel.action !== "download" || !links;
+      if (links) {
+        appleSiliconLink.href = links.appleSilicon;
+        intelLink.href = links.intel;
       }
-    });
 
-    // Handle provider card clicks
-    providerCards.forEach((card) => {
-      card.addEventListener("click", () => {
-        const provider = card.dataset.provider as AIProviderType;
-        if (provider) {
-          selectProviderCard(provider);
-        }
-      });
-    });
+      agentGroup.hidden = panel.agents.length === 0;
+      agentSelect.replaceChildren(...panel.agents.map((agent) => new Option(agent.title, agent.name)));
+      const current = this.agentd.agent();
+      if (current) agentSelect.value = current.name;
 
-    // Reset fetch state when API key changes
-    apiTokenInput.addEventListener("input", () => {
-      modelsFetched = false;
-      modelHint.textContent = "Click to fetch available models";
+      actionButton.hidden = panel.action !== "connect" && panel.action !== "disconnect";
+      actionButton.textContent = panel.action === "connect" ? "Connect agentd" : "Disconnect";
+      void renderModels();
+    };
+
+    this.agentd.daemon.subscribe(() => {
+      renderPanel();
+      if (this.currentError) this.showFixWithAIOption();
+      else this.updateInputAreaVisibility();
     });
+    renderPanel();
 
     settingsBtn.addEventListener("click", () => {
       EventHelpers.safeEmit("ui:settings:open", {});
       settingsDialog.classList.toggle("hidden");
+      // Look for agentd only when the user shows interest: the browser asks before a page may reach a local program.
+      if (!settingsDialog.classList.contains("hidden")) {
+        void this.agentd.daemon.detect();
+        void renderModels();
+      }
     });
 
     settingsClose.addEventListener("click", () => {
       settingsDialog.classList.add("hidden");
     });
 
-    saveSettingsBtn.addEventListener("click", () => {
-      const provider = selectedProvider;
-      const apiToken = apiTokenInput.value.trim();
-      const modelId = modelIdSelect.value.trim() || DEFAULT_MODELS[provider];
-
-      localStorage.setItem("aiProvider", provider);
-      localStorage.setItem("aiApiKey", apiToken);
-      localStorage.setItem("aiModel", modelId);
-
-      AI_CONFIG.provider = provider;
-      AI_CONFIG.apiKey = apiToken;
-      AI_CONFIG.model = modelId;
-      settingsDialog.classList.add("hidden");
-
-      // Emit settings save event
-      EventHelpers.safeEmit("ui:settings:save", { provider, apiKey: apiToken, model: modelId });
-
-      // Update input area visibility after saving settings
-      this.updateInputAreaVisibility();
-
-      // Initialize or clear AI handler based on API key availability
-      if (apiToken && apiToken.trim().length > 0) {
-        // Always recreate AI handler when settings change to pick up new provider
-        const inputField = document.querySelector<HTMLInputElement>("#input-field");
-        const inputArea = document.querySelector<HTMLDivElement>("#input-area")!;
-
-        if (inputField) {
-          this.aiHandler = new AIHandler(this.editor, {
-            inputField,
-            inputArea,
-            generationStatus: this.elements.generationStatus,
-          });
-        }
-      } else {
-        // Clear AI handler if API key is removed
-        this.aiHandler = null;
-      }
-
-      // Show visual feedback
-      showToast("Settings saved successfully!");
+    actionButton.addEventListener("click", () => {
+      if (action === "connect") void this.agentd.connect();
+      if (action === "disconnect") void this.agentd.disconnect();
     });
+
+    agentSelect.addEventListener("change", () => {
+      this.agentd.select(agentSelect.value);
+      void renderModels();
+    });
+
+    modelSelect.addEventListener("change", async () => {
+      try {
+        await this.agentd.selectModel(modelSelect.value);
+      } catch (error) {
+        showToast(`Could not switch model: ${error instanceof Error ? error.message : String(error)}`, "error");
+        void renderModels();
+      }
+    });
+
+    // A user who connected before has already answered the browser's prompt: look at load.
+    if (this.agentd.hasConnectedBefore()) void this.agentd.daemon.detect();
 
     setupModalDismiss(settingsDialog, settingsBtn);
   }
@@ -663,7 +577,7 @@ class MermaidEditor {
 
     // Hide error-specific elements
     const fixButton = document.querySelector<HTMLButtonElement>("#fix-with-ai-btn");
-    const errorWarning = document.querySelector<HTMLDivElement>(".api-key-warning.error-state");
+    const errorWarning = document.querySelector<HTMLDivElement>(".agentd-warning.error-state");
     if (fixButton) fixButton.style.display = "none";
     if (errorWarning) errorWarning.style.display = "none";
 
@@ -920,18 +834,17 @@ class MermaidEditor {
     const inputField = document.querySelector<HTMLInputElement>("#input-field");
     const presetButton = document.querySelector<HTMLButtonElement>("#preset-btn");
     const presetCard = document.querySelector<HTMLDivElement>("#preset-card");
-    const apiKeyWarning = document.querySelector<HTMLDivElement>(".api-key-warning");
+    const agentdWarning = document.querySelector<HTMLDivElement>(".agentd-warning");
     const fixButton = document.querySelector<HTMLButtonElement>("#fix-with-ai-btn");
-    const apiKey = localStorage.getItem("aiApiKey") || "";
 
     // Hide normal input elements
     if (inputField) inputField.style.display = "none";
     if (presetButton) presetButton.style.display = "none";
     if (presetCard) presetCard.classList.add("hidden");
-    if (apiKeyWarning) apiKeyWarning.style.display = "none";
+    if (agentdWarning) agentdWarning.style.display = "none";
 
-    if (apiKey && apiKey.trim().length > 0) {
-      // Show or create fix with AI button when there's an error and API key is available
+    if (this.agentd.agent()) {
+      // Show or create fix with AI button when there's an error and an agent is ready
       if (!fixButton) {
         const newFixButton = document.createElement("button");
         newFixButton.id = "fix-with-ai-btn";
@@ -953,18 +866,19 @@ class MermaidEditor {
         fixButton.style.display = "block";
       }
     } else {
-      // Show or create API key warning when there's an error but no API key
-      let errorWarning = document.querySelector<HTMLDivElement>(".api-key-warning.error-state");
+      // Show or create the agentd warning when there's an error but no agent is ready
+      if (fixButton) fixButton.style.display = "none";
+      let errorWarning = document.querySelector<HTMLDivElement>(".agentd-warning.error-state");
       if (!errorWarning) {
         errorWarning = document.createElement("div");
-        errorWarning.className = "api-key-warning error-state";
+        errorWarning.className = "agentd-warning error-state";
         errorWarning.innerHTML = `
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
             <line x1="12" y1="9" x2="12" y2="13"></line>
             <line x1="12" y1="17" x2="12.01" y2="17"></line>
           </svg>
-          <span>Add an API key in settings to fix errors with AI</span>
+          <span>Set up AI in settings to fix this error</span>
         `;
         inputArea.appendChild(errorWarning);
       } else {
@@ -1016,32 +930,21 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
     // Set the fix prompt as the input value
     inputField.value = fixPrompt;
 
-    // Ensure AI handler is properly initialized with current DOM elements
-    if (!this.aiHandler) {
-      this.aiHandler = new AIHandler(this.editor, {
-        inputField,
-        inputArea,
-        generationStatus: this.elements.generationStatus,
-      });
-    }
-
     await this.aiHandler.handleSubmit();
   }
 
   /**
-   * Update input area visibility based on API key availability
+   * Update input area visibility based on whether an agent is ready
    */
   private updateInputAreaVisibility(): void {
     if (this.currentError) return;
 
     const elements = this.getInputAreaElements();
-    const apiKey = localStorage.getItem("aiApiKey") || "";
-    const hasApiKey = apiKey.trim().length > 0;
 
-    if (hasApiKey) {
+    if (this.agentd.agent()) {
       this.showAIInputElements(elements);
     } else {
-      this.showApiKeyWarning(elements);
+      this.showAgentdWarning(elements);
     }
   }
 
@@ -1054,7 +957,7 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
       inputField: document.querySelector<HTMLInputElement>("#input-field"),
       presetButton: document.querySelector<HTMLButtonElement>("#preset-btn"),
       presetCard: document.querySelector<HTMLDivElement>("#preset-card"),
-      apiKeyWarning: document.querySelector<HTMLDivElement>(".api-key-warning"),
+      agentdWarning: document.querySelector<HTMLDivElement>(".agentd-warning"),
     };
   }
 
@@ -1062,7 +965,7 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
    * Show AI input elements (input field and presets)
    */
   private showAIInputElements(elements: any): void {
-    this.hideApiKeyWarning(elements.apiKeyWarning);
+    this.hideAgentdWarning(elements.agentdWarning);
     this.ensureInputField(elements);
     this.ensurePresetButton(elements);
     this.ensurePresetCard(elements);
@@ -1070,11 +973,11 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
   }
 
   /**
-   * Show API key warning and hide other elements
+   * Show agentd warning and hide other elements
    */
-  private showApiKeyWarning(elements: any): void {
+  private showAgentdWarning(elements: any): void {
     this.hideInputElements(elements);
-    this.createOrShowApiKeyWarning(elements);
+    this.createOrShowAgentdWarning(elements);
   }
 
   /**
@@ -1087,36 +990,36 @@ Please provide the corrected Mermaid diagram code that fixes this error while pr
   }
 
   /**
-   * Hide API key warning
+   * Hide agentd warning
    */
-  private hideApiKeyWarning(apiKeyWarning: HTMLElement | null): void {
-    if (apiKeyWarning) apiKeyWarning.style.display = "none";
+  private hideAgentdWarning(agentdWarning: HTMLElement | null): void {
+    if (agentdWarning) agentdWarning.style.display = "none";
   }
 
   /**
-   * Create or show API key warning element
+   * Create or show agentd warning element
    */
-  private createOrShowApiKeyWarning(elements: any): void {
-    if (!elements.apiKeyWarning) {
-      this.createApiKeyWarning(elements.inputArea);
+  private createOrShowAgentdWarning(elements: any): void {
+    if (!elements.agentdWarning) {
+      this.createAgentdWarning(elements.inputArea);
     } else {
-      elements.apiKeyWarning.style.display = "flex";
+      elements.agentdWarning.style.display = "flex";
     }
   }
 
   /**
-   * Create API key warning element
+   * Create agentd warning element
    */
-  private createApiKeyWarning(inputArea: HTMLElement): void {
+  private createAgentdWarning(inputArea: HTMLElement): void {
     const warningDiv = document.createElement("div");
-    warningDiv.className = "api-key-warning";
+    warningDiv.className = "agentd-warning";
     warningDiv.innerHTML = `
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
         <line x1="12" y1="9" x2="12" y2="13"></line>
         <line x1="12" y1="17" x2="12.01" y2="17"></line>
       </svg>
-      <span>Add an API key in settings to use AI</span>
+      <span>AI runs through agentd, a small app on your computer. Set it up in settings.</span>
     `;
     inputArea.appendChild(warningDiv);
   }

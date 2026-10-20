@@ -21,15 +21,6 @@ export interface EditorElements {
   generationStatus: HTMLSpanElement;
 }
 
-export type AIProviderType = "google" | "openai" | "anthropic";
-
-export interface AIConfig {
-  provider: AIProviderType;
-  apiKey: string;
-  model: string;
-  temperature: number;
-}
-
 export interface Preset {
   title: string;
   prompt: string;

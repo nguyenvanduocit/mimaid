@@ -8,7 +8,7 @@ A lightweight, browser-based Mermaid diagram editor with real-time preview and c
 - 👥 Collaborative editing (when using room parameter)
 - 📱 Responsive design with resizable editor
 - 🔍 Pan and zoom preview
-- 🤖 AI-powered diagram generation (Google Gemini, OpenAI, Anthropic Claude)
+- 🤖 AI-powered diagram generation through the coding agents on your computer ([agentd](https://github.com/nguyenvanduocit/agentd))
 - 🎯 Smart code completion
 - 🔗 Shareable diagram URLs
 - 🧩 WebMCP tools for in-browser AI agents
@@ -53,7 +53,7 @@ bun run test:run     # Single run (CI)
 bun run typecheck    # TypeScript check only
 ```
 
-The test suite covers pure-logic surfaces (URL compression, error parsing, event bus, AI message building) — 11 tests across 3 files. DOM-heavy code is covered after the planned god-class refactor in Sub-Project 1.
+The test suite covers pure-logic surfaces (URL compression, error parsing, event bus, AI prompt building, the agentd connection state, the ACP chat against a fake agent). DOM-heavy code is covered after the planned god-class refactor in Sub-Project 1.
 
 ## Usage
 
@@ -64,6 +64,16 @@ The test suite covers pure-logic surfaces (URL compression, error parsing, event
 3. Pan the preview by dragging
 4. Zoom using mouse wheel
 5. Resize the editor/preview split using the center handle
+
+### AI Generation
+
+AI runs on your computer through [agentd](https://github.com/nguyenvanduocit/agentd), so no API key is involved:
+
+1. Install and open agentd (the settings panel links the Mac downloads).
+2. Open the settings panel (gear icon) and press **Connect agentd**. agentd asks you to allow this page and to pick a folder.
+3. Choose an agent (Claude Code, Codex, Grok) and, when the agent offers a choice, its model. Then describe a diagram in the input box.
+
+The prompt tells the agent not to use tools, and the page rejects every tool permission the agent asks for. An agent that runs without asking permission is outside the page's control, so choose a folder you are comfortable with. A page's grant lasts 30 days.
 
 ### Collaborative Editing
 
@@ -105,6 +115,7 @@ The project uses several key technologies:
 - [pele](https://pele.run) for diagram rendering
 - Liveblocks + Yjs for collaboration
 - LZ-String for URL compression
+- [agentd](https://github.com/nguyenvanduocit/agentd) client + [ACP](https://agentclientprotocol.com) for AI generation
 
 ## License
 

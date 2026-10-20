@@ -584,48 +584,6 @@ body {
   gap: 16px;
 }
 
-.provider-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.provider-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  cursor: pointer;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
-}
-
-.provider-card:hover {
-  background: var(--line);
-}
-
-.provider-card.selected {
-  border-color: var(--color-accent);
-  box-shadow: inset 0 0 0 1px var(--color-accent);
-  background: transparent;
-}
-
-.provider-icon {
-  flex-shrink: 0;
-}
-
-.provider-name {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text);
-  text-align: center;
-  line-height: 1.3;
-}
-
 .form-group {
   display: flex;
   flex-direction: column;
@@ -638,13 +596,24 @@ body {
   line-height: 1.5;
 }
 
+.settings-content [hidden] {
+  display: none;
+}
+
+.settings-content p {
+  margin: 0;
+}
+
+.settings-content a {
+  color: var(--color-accent);
+}
+
 .settings-content label {
   font-weight: 500;
   color: var(--color-text);
   font-size: 13px;
 }
 
-.settings-content input,
 .settings-content select {
   height: 36px;
   padding: 0 12px;
@@ -666,12 +635,10 @@ body {
   cursor: pointer;
 }
 
-.settings-content input:hover,
 .settings-content select:hover {
   border-color: var(--line-active);
 }
 
-.settings-content input:focus,
 .settings-content select:focus {
   border-color: var(--color-accent);
   outline: none;
@@ -782,10 +749,10 @@ body {
 }
 
 /* ==========================================================================
-   API Key Notice & Fix with AI
+   Agentd Notice & Fix with AI
    ========================================================================== */
 
-.api-key-warning {
+.agentd-warning {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -801,16 +768,16 @@ body {
   line-height: 1.35;
 }
 
-.api-key-warning svg {
+.agentd-warning svg {
   flex-shrink: 0;
   color: var(--color-warning);
 }
 
-.api-key-warning.error-state {
+.agentd-warning.error-state {
   background: var(--color-error-soft);
 }
 
-.api-key-warning.error-state svg {
+.agentd-warning.error-state svg {
   color: var(--color-error);
 }
 
